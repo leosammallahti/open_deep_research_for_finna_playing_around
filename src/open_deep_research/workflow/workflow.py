@@ -5,8 +5,9 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph import START, END, StateGraph
 from langgraph.types import Send, interrupt, Command
 
+from open_deep_research.pydantic_state import DeepResearchState
 from open_deep_research.workflow.configuration import WorkflowConfiguration
-from open_deep_research.workflow.state import (
+from open_deep_research.pydantic_state import (
     ClarifyWithUser,
     SectionOutput
 )
@@ -33,7 +34,6 @@ from open_deep_research.utils import (
     get_today_str
 )
 import re
-from open_deep_research.pydantic_state import DeepResearchState
 
 ## Nodes
 def initial_router(state: DeepResearchState, config: RunnableConfig):

@@ -29,12 +29,10 @@ Today is {today}
 report_planner_instructions="""I want a plan for a report that is concise and focused.
 
 <Report topic>
-The topic of the report is:
 {topic}
 </Report topic>
 
 <Report organization>
-The report should follow this organization: 
 {report_organization}
 </Report organization>
 
@@ -46,28 +44,17 @@ Here is context to use to plan the sections of the report:
 <Task>
 Generate a list of sections for the report. Your plan should be tight and focused with NO overlapping sections or unnecessary filler. 
 
-For example, a good report structure might look like:
-1/ intro
-2/ overview of topic A
-3/ overview of topic B
-4/ comparison between A and B
-5/ conclusion
-
 Each section should have the fields:
+- Name: Name for this section of the report.
+- Description: Brief overview of the main topics covered in this section.
+- Research: Whether to perform web research for this section. Main body sections (not intro/conclusion) MUST have Research=True. A report must have AT LEAST 2-3 sections with Research=True to be useful.
+- Content: The content of the section, which you will leave blank for now.
 
-- Name - Name for this section of the report.
-- Description - Brief overview of the main topics covered in this section.
-- Research - Whether to perform web research for this section of the report. IMPORTANT: Main body sections (not intro/conclusion) MUST have Research=True. A report must have AT LEAST 2-3 sections with Research=True to be useful.
-- Content - The content of the section, which you will leave blank for now.
-
-Integration guidelines:
-- Include examples and implementation details within main topic sections, not as separate sections
-- Ensure each section has a distinct purpose with no content overlap
-- Combine related concepts rather than separating them
-- CRITICAL: Every section MUST be directly relevant to the main topic
-- Avoid tangential or loosely related sections that don't directly address the core topic
-
-Before submitting, review your structure to ensure it has no redundant sections and follows a logical flow.
+Guidelines:
+- Ensure each section has a distinct purpose with no content overlap.
+- Combine related concepts rather than separating them.
+- Every section MUST be directly relevant to the main topic.
+- Avoid tangential or loosely related sections.
 </Task>
 
 <Feedback>
@@ -115,7 +102,7 @@ section_writer_instructions = """Write one section of a research report.
 2. If present, review any existing section content. 
 3. Then, look at the provided Source material.
 4. Decide the sources that you will use it to write a report section.
-5. Write the report section and list your sources. 
+5. Write the report section using the sources but do NOT list the sources in the section.
 </Task>
 
 <Writing Guidelines>
@@ -128,18 +115,15 @@ section_writer_instructions = """Write one section of a research report.
 </Writing Guidelines>
 
 <Citation Rules>
-- Assign each unique URL a single citation number in your text
-- End with ### Sources that lists each source with corresponding numbers
-- IMPORTANT: Number sources sequentially without gaps (1,2,3,4...) in the final list regardless of which sources you choose
-- Example format:
-  [1] Source Title: URL
-  [2] Source Title: URL
+- Use inline citations like [1], [2], etc. when referencing source material
+- Do NOT include a sources list in the section - sources will be compiled at the end of the report
+- Ensure all claims are supported by the provided source material
 </Citation Rules>
 
 <Final Check>
 1. Verify that EVERY claim is grounded in the provided Source material
-2. Confirm each URL appears ONLY ONCE in the Source list
-3. Verify that sources are numbered sequentially (1,2,3...) without any gaps
+2. Do NOT include a ### Sources section
+3. Only include the section title and content
 </Final Check>
 """
 
@@ -389,7 +373,8 @@ You are a researcher responsible for completing a specific section of a report.
      - Begin with the section title formatted as "## [Section Title]" (H2 level with ##)
      - Be formatted in Markdown style
      - Be MAXIMUM 200 words (strictly enforce this limit)
-     - End with a "### Sources" subsection (H3 level with ###) containing a numbered list of URLs used
+     - Use inline citations [1], [2], etc. when referencing sources
+     - NOT include a sources list (sources will be compiled at the end of the full report)
      - Use clear, concise language with bullet points where appropriate
      - Include relevant facts, statistics, or expert opinions
 
@@ -397,12 +382,7 @@ Example format for content:
 ```
 ## [Section Title]
 
-[Body text in markdown format, maximum 200 words...]
-
-### Sources
-1. [URL 1]
-2. [URL 2]
-3. [URL 3]
+[Body text in markdown format with inline citations [1], [2], maximum 200 words...]
 ```
 
    **Step 2: Signal Completion**

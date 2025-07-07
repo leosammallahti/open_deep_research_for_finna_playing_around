@@ -10,7 +10,8 @@ from open_deep_research.multi_agent import supervisor_builder
 
 load_dotenv("../.env")
 
-print(os.getenv("LANGSMITH_API_KEY"))
+# Security fix: Removed API key logging to prevent exposure in logs
+# print(os.getenv("LANGSMITH_API_KEY"))
 
 client = Client()
 

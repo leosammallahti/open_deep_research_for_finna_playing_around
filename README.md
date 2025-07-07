@@ -1,6 +1,14 @@
 # Open Deep Research
 
-Open Deep Research is an experimental, fully open-source research assistant that automates deep research and produces comprehensive reports on any topic. It features two implementations - a [workflow](https://langchain-ai.github.io/langgraph/tutorials/workflows/) and a multi-agent architecture - each with distinct advantages. You can customize the entire research and writing process with specific models, prompts, report structure, and search tools.
+Open Deep Research is an experimental, fully open-source research assistant that automates deep research and produces comprehensive reports on any topic. It features a highly flexible architecture that allows you to customize the entire research and writing process.
+
+### Key Features
+- **🤖 Flexible, Per-Role Model Selection**: Choose the best AI model for each phase of the research process—planning, writing, and summarization. Use powerful reasoning models like DeepSeek for planning and state-of-the-art writers like Claude 3.5 Sonnet for content generation.
+- **🚀 Predefined Model Combinations**: Get started quickly with curated model setups like "Max Reasoning" or "All Open-Source," or create your own custom combination.
+- **🛠️ Robust Tool & Model Compatibility**: The system intelligently handles models that don't natively support function calling (like `deepseek-reasoner`) by using a fallback strategy, ensuring smooth, error-free operation.
+- **✨ Automatic Output Cleaning**: Automatically filters out artifacts like `<think>` tokens from models, ensuring clean, usable output.
+- **🔌 Multiple Search APIs**: Supports a wide array of search providers, including Tavily, Perplexity, Google Search, ArXiv, and more.
+- ** HUMAN-IN-THE-LOOP**: Optional human feedback steps to review and approve the AI's research plan before execution.
 
 #### Workflow
 
@@ -52,6 +60,13 @@ Use this to open the Studio UI:
 - 🎨 Studio UI: https://smith.langchain.com/studio/?baseUrl=http://127.0.0.1:2024
 - 📚 API Docs: http://127.0.0.1:2024/docs
 ```
+
+### ⚙️ Configuring Your Assistant
+
+From the UI, you can easily configure the assistant:
+1.  **Choose a Model Combination**: Select a predefined combo like `Max Reasoning` for the best results, or `All Open-Source` to use models like Llama 3. Select `Custom` to configure each model individually.
+2.  **Select a Search Provider**: Choose the search engine you want the assistant to use.
+3.  **Adjust Advanced Settings**: Control the report style (Comprehensive, Concise, etc.) and the number of search queries per section.
 
 #### Multi-agent
 
@@ -317,6 +332,36 @@ groq.APIError: Failed to call a function. Please adjust your prompt. See 'failed
 (6) Follow [here[(https://github.com/langchain-ai/open_deep_research/issues/75#issuecomment-2811472408) to use with OpenRouter.
 
 (7) For working with local models via Ollama, see [here](https://github.com/langchain-ai/open_deep_research/issues/65#issuecomment-2743586318).
+
+## 🔍 Troubleshooting & Error Analysis
+
+If you encounter errors while running Open Deep Research, use these built-in tools to quickly identify if issues have already been resolved:
+
+### Error Analysis Tools
+```bash
+# Analyze error logs for known issues
+python error_log_analyzer.py
+
+# Analyze specific log file
+python error_log_analyzer.py streamlit_error.log
+
+# Confirm which fixes actually work (user testing required)
+python confirm_fix.py
+```
+
+### Issue Status System
+- **✅ USER_CONFIRMED** - User has personally tested and confirmed the fix works
+- **❌ CONFIRMED_BROKEN** - User has confirmed the issue still exists despite attempted fixes  
+- **🔧 NEEDS_VERIFICATION** - Code fix implemented but not confirmed by user
+- **⚠️ ONGOING** - Known issues with workarounds but no permanent fix
+- **❓ UNKNOWN** - New error patterns that haven't been categorized yet
+
+### Documentation
+- **📋 `RESOLVED_ISSUES.md`** - Complete tracker of all issues with their current status
+- **🤖 `error_log_analyzer.py`** - Automated script that identifies resolved vs. ongoing issues
+- **🧪 `confirm_fix.py`** - Interactive tool for users to confirm which fixes actually work
+
+**Important:** Issues are only marked as truly resolved when users personally test and confirm they work. This prevents wasting time on "fixes" that don't actually solve the problem.
 
 ## Evaluation Systems
 
