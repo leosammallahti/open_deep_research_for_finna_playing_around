@@ -129,7 +129,7 @@ section_writer_instructions = """Write one section of a research report.
 2. If present, review any existing section content. 
 3. Then, look at the provided Source material.
 4. Decide the sources that you will use it to write a report section.
-5. Write the report section and list your sources. 
+5. Write the report section using the sources but do NOT list the sources in the section.
 </Task>
 
 <Writing Guidelines>
@@ -144,18 +144,15 @@ section_writer_instructions = """Write one section of a research report.
 </Writing Guidelines>
 
 <Citation Rules>
-- Assign each unique URL a single citation number in your text
-- End with ### Sources that lists each source with corresponding numbers
-- IMPORTANT: Number sources sequentially without gaps (1,2,3,4...) in the final list regardless of which sources you choose
-- Example format:
-  [1] Source Title: URL
-  [2] Source Title: URL
+- Use inline citations like [1], [2], etc. when referencing source material
+- Do NOT include a sources list in the section - sources will be compiled at the end of the report
+- Ensure all claims are supported by the provided source material
 </Citation Rules>
 
 <Final Check>
 1. Verify that EVERY claim is grounded in the provided Source material
-2. Confirm each URL appears ONLY ONCE in the Source list
-3. Verify that sources are numbered sequentially (1,2,3...) without any gaps
+2. Do NOT include a ### Sources section
+3. Only include the section title and content
 4. DO NOT include any commentary from yourself in the section. Just write the section. Do not say "I'm writing a section" or "I'll revise this section" or anything like that. Just include the report itself.
 </Final Check>
 """

@@ -39,6 +39,16 @@ class Feedback(BaseModel):
         description="List of follow-up search queries.",
     )
 
+class ClarifyWithUser(BaseModel):
+    question: str = Field(
+        description="A question to ask the user to clarify the report scope",
+    )
+
+class SectionOutput(BaseModel):
+    section_content: str = Field(
+        description="The content of the section.",
+    )
+
 # Unified State
 class DeepResearchState(BaseModel):
     model_config = ConfigDict(frozen=True)

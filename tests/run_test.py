@@ -37,7 +37,7 @@ def main():
     parser.add_argument("--max-search-depth", help="Maximum search depth for graph agent")
     
     # Search API configuration
-    parser.add_argument("--search-api", choices=["tavily", "duckduckgo"], 
+    parser.add_argument("--search-api", choices=["tavily", "duckduckgo", "exa", "perplexity", "arxiv", "pubmed", "linkup", "googlesearch", "azureaisearch"], 
                         help="Search API to use for content retrieval")
     
     args = parser.parse_args()

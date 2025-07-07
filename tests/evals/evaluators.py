@@ -62,7 +62,7 @@ def eval_overall_quality(inputs: dict, outputs: dict):
         }]
 
     eval_result = cast(OverallQualityScore, eval_model.with_structured_output(OverallQualityScore).invoke([
-        {"role": "system", "content": OVERALL_QUALITY_PROMPT.format(today=get_today_str())},
+        {"role": "system", "content": OVERALL_QUALITY_PROMPT.replace("{today}", get_today_str())},
         {"role": "user", "content": user_input_content}
     ]))
     # normalize to 0-1
@@ -82,7 +82,7 @@ def eval_relevance(inputs: dict, outputs: dict):
         }]
 
     eval_result = cast(RelevanceScore, eval_model.with_structured_output(RelevanceScore).invoke([
-        {"role": "system", "content": RELEVANCE_PROMPT.format(today=get_today_str())},
+        {"role": "system", "content": RELEVANCE_PROMPT.replace("{today}", get_today_str())},
         {"role": "user", "content": user_input_content}
     ]))
     # normalize to 0-1
@@ -102,7 +102,7 @@ def eval_structure(inputs: dict, outputs: dict):
         }]
 
     eval_result = cast(StructureScore, eval_model.with_structured_output(StructureScore).invoke([
-        {"role": "system", "content": STRUCTURE_PROMPT.format(today=get_today_str())},
+        {"role": "system", "content": STRUCTURE_PROMPT.replace("{today}", get_today_str())},
         {"role": "user", "content": user_input_content}
     ]))
     # normalize to 0-1
@@ -113,7 +113,7 @@ def eval_groundedness(inputs: dict, outputs: dict):
     report = outputs["messages"][0]["content"]
     context = outputs["context"]
 
-    user_input_content = GROUNDEDNESS_PROMPT.format(context=context, report=report, today=get_today_str())
+    user_input_content = GROUNDEDNESS_PROMPT.replace("{context}", context).replace("{report}", report).replace("{today}", get_today_str())
     if isinstance(eval_model, ChatAnthropic):
         user_input_content = [{
             "type": "text",
