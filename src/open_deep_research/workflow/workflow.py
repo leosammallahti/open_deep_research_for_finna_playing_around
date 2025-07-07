@@ -2,17 +2,11 @@ from typing import Literal
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, get_buffer_string
 from langchain_core.runnables import RunnableConfig
-from langgraph.constants import Send
 from langgraph.graph import START, END, StateGraph
-from langgraph.types import interrupt, Command
+from langgraph.types import Send, interrupt, Command
 
 from open_deep_research.workflow.configuration import WorkflowConfiguration
 from open_deep_research.workflow.state import (
-    ReportStateInput,
-    ReportStateOutput,
-    ReportState,
-    SectionState,
-    SectionOutputState,
     ClarifyWithUser,
     SectionOutput
 )
@@ -38,18 +32,20 @@ from open_deep_research.utils import (
     select_and_execute_search,
     get_today_str
 )
+import re
+from open_deep_research.pydantic_state import DeepResearchState
 
 ## Nodes
-def initial_router(state: ReportState, config: RunnableConfig):
+def initial_router(state: DeepResearchState, config: RunnableConfig):
     configurable = WorkflowConfiguration.from_runnable_config(config)
-    if configurable.clarify_with_user and not state.get("already_clarified_topic", False):
+    if configurable.clarify_with_user and not state.already_clarified_topic:
         return "clarify_with_user"
     else:
         return "generate_report_plan"
 
 
-async def clarify_with_user(state: ReportState, config: RunnableConfig):
-    messages = state["messages"]
+async def clarify_with_user(state: DeepResearchState, config: RunnableConfig):
+    messages = state.messages
     configurable = WorkflowConfiguration.from_runnable_config(config)
     writer_provider = get_config_value(configurable.writer_provider)
     writer_model_name = get_config_value(configurable.writer_model)
@@ -59,12 +55,12 @@ async def clarify_with_user(state: ReportState, config: RunnableConfig):
     system_instructions = clarify_with_user_instructions.format(messages=get_buffer_string(messages))
     results = await structured_llm.ainvoke([SystemMessage(content=system_instructions),
                                      HumanMessage(content="Generate search queries that will help with planning the sections of the report.")])
-    return {"messages": [AIMessage(content=results.question)], "already_clarified_topic": True}
+    return {"messages": messages + [AIMessage(content=results.question)], "already_clarified_topic": True}
 
 
-async def generate_report_plan(state: ReportState, config: RunnableConfig) -> Command[Literal["human_feedback","build_section_with_web_research"]]:
-    messages = state["messages"]
-    feedback_list = state.get("feedback_on_report_plan", [])
+async def generate_report_plan(state: DeepResearchState, config: RunnableConfig) -> Command[Literal["human_feedback","build_section_with_web_research"]]:
+    messages = state.messages
+    feedback_list = state.feedback_on_report_plan
     feedback = " /// ".join(feedback_list) if feedback_list else ""
 
     configurable = WorkflowConfiguration.from_runnable_config(config)
@@ -131,9 +127,9 @@ async def generate_report_plan(state: ReportState, config: RunnableConfig) -> Co
         ], update={"sections": sections})
 
 
-async def human_feedback(state: ReportState, config: RunnableConfig) -> Command[Literal["generate_report_plan","build_section_with_web_research"]]:
-    messages = state["messages"]
-    sections = state['sections']
+async def human_feedback(state: DeepResearchState, config: RunnableConfig) -> Command[Literal["generate_report_plan","build_section_with_web_research"]]:
+    messages = state.messages
+    sections = state.sections
     sections_str = "\n\n".join(
         f"Section: {section.name}\n"
         f"Description: {section.description}\n"
@@ -152,14 +148,17 @@ async def human_feedback(state: ReportState, config: RunnableConfig) -> Command[
         ])
     elif isinstance(feedback, str):
         return Command(goto="generate_report_plan", 
-                       update={"feedback_on_report_plan": [feedback]})
+                       update={"feedback_on_report_plan": state.feedback_on_report_plan + [feedback]})
     else:
         raise TypeError(f"Interrupt value of type {type(feedback)} is not supported.")
 
 
-async def generate_queries(state: SectionState, config: RunnableConfig):
-    messages = state["messages"]
-    section = state["section"]
+async def generate_queries(state: DeepResearchState, config: RunnableConfig):
+    messages = state.messages
+    section = state.section
+    if not section:
+        raise ValueError("Section not found in state.")
+        
     configurable = WorkflowConfiguration.from_runnable_config(config)
     number_of_queries = configurable.number_of_queries
     writer_provider = get_config_value(configurable.writer_provider)
@@ -177,8 +176,8 @@ async def generate_queries(state: SectionState, config: RunnableConfig):
     return {"search_queries": queries.queries}
 
 
-async def search_web(state: SectionState, config: RunnableConfig):
-    search_queries = state["search_queries"]
+async def search_web(state: DeepResearchState, config: RunnableConfig):
+    search_queries = state.search_queries
     configurable = WorkflowConfiguration.from_runnable_config(config)
     search_api = get_config_value(configurable.search_api)
     search_api_config = configurable.search_api_config or {}
@@ -187,13 +186,13 @@ async def search_web(state: SectionState, config: RunnableConfig):
     query_list = [query.search_query for query in search_queries]
     source_str = await select_and_execute_search(search_api, query_list, params_to_pass)
 
-    return {"source_str": source_str, "search_iterations": state["search_iterations"] + 1}
+    return {"source_str": source_str, "search_iterations": state.search_iterations + 1}
 
 
-async def write_section(state: SectionState, config: RunnableConfig):
-    messages = state["messages"]
-    section = state["section"]
-    source_str = state["source_str"]
+async def write_section(state: DeepResearchState, config: RunnableConfig):
+    messages = state.messages
+    section = state.section
+    source_str = state.source_str
     configurable = WorkflowConfiguration.from_runnable_config(config)
     section_writer_inputs_formatted = section_writer_inputs.format(messages=get_buffer_string(messages), 
                                                              section_name=section.name, 
@@ -213,15 +212,16 @@ async def write_section(state: SectionState, config: RunnableConfig):
     section_content = await writer_model.ainvoke([SystemMessage(content=section_writer_instructions),
                                            HumanMessage(content=section_writer_inputs_formatted)])
     
-    section.content = section_content.section_content
+    # Create a new section object with the updated content to maintain immutability
+    updated_section = section.model_copy(update={'content': section_content.section_content})
 
     section_grader_message = ("Grade the report and consider follow-up questions for missing information. "
                               "If the grade is 'pass', return empty strings for all follow-up queries. "
                               "If the grade is 'fail', provide specific search queries to gather missing information.")
     
     section_grader_instructions_formatted = section_grader_instructions.format(messages=get_buffer_string(messages), 
-                                                                               section_topic=section.description,
-                                                                               section=section.content, 
+                                                                               section_topic=updated_section.description,
+                                                                               section=updated_section.content, 
                                                                                number_of_follow_up_queries=configurable.number_of_queries)
 
     planner_provider = get_config_value(configurable.planner_provider)
@@ -243,19 +243,19 @@ async def write_section(state: SectionState, config: RunnableConfig):
     feedback = await reflection_model.ainvoke([SystemMessage(content=section_grader_instructions_formatted),
                                         HumanMessage(content=section_grader_message)])
 
-    if feedback.grade == "pass" or state["search_iterations"] >= configurable.max_search_depth:
-        update = {"completed_sections": [section]}
+    if feedback.grade == "pass" or state.search_iterations >= configurable.max_search_depth:
+        update = {"completed_sections": state.completed_sections + [updated_section]}
         if configurable.include_source_str:
-            update["source_str"] = source_str
+            update["source_str"] = state.source_str + source_str
         return Command(update=update, goto=END)
     else:
         return Command(
-            update={"search_queries": feedback.follow_up_queries, "section": section},
+            update={"search_queries": feedback.follow_up_queries, "section": updated_section},
             goto="search_web"
         )
 
 
-async def write_final_sections(state: SectionState, config: RunnableConfig):
+async def write_final_sections(state: DeepResearchState, config: RunnableConfig):
     configurable = WorkflowConfiguration.from_runnable_config(config)
     writer_provider = get_config_value(configurable.writer_provider)
     writer_model_name = get_config_value(configurable.writer_model)
@@ -275,37 +275,82 @@ async def write_final_sections(state: SectionState, config: RunnableConfig):
     return {"completed_sections": [section]}
 
 
-async def gather_completed_sections(state: ReportState):
-    completed_sections = state["completed_sections"]
+async def gather_completed_sections(state: DeepResearchState):
+    completed_sections = state.completed_sections
     completed_report_sections = format_sections(completed_sections)
 
     return {"report_sections_from_research": completed_report_sections}
 
 
-async def compile_final_report(state: ReportState, config: RunnableConfig):
+async def compile_final_report(state: DeepResearchState, config: RunnableConfig):
     configurable = WorkflowConfiguration.from_runnable_config(config)
-    sections = state["sections"]
-    completed_sections = {s.name: s.content for s in state["completed_sections"]}
-    for section in sections:
-        section.content = completed_sections[section.name]
-    all_sections = "\n\n".join([s.content for s in sections])
+    
+    completed_sections_map = {s.name: s.content for s in state.completed_sections}
+    
+    updated_sections = []
+    for section in state.sections:
+        # Pydantic models are immutable, so we create a new one with updated content
+        updated_section = section.model_copy(update={'content': completed_sections_map.get(section.name, section.content)})
+        updated_sections.append(updated_section)
 
-    if configurable.include_source_str:
-        return {"final_report": all_sections, "source_str": state["source_str"], "messages": [AIMessage(content=all_sections)]}
+    all_sections = "\n\n".join([s.content for s in updated_sections])
+
+    if configurable.include_source_str and state.source_str:
+        # Extract unique URLs from all source strings
+        all_source_str = state.source_str
+        if isinstance(all_source_str, str):
+            # If it's a single string, convert to list
+            source_strings = [all_source_str]
+        else:
+            # If it's already a list
+            source_strings = all_source_str
+            
+        all_urls = []
+        url_pattern = r'URL:\s*(https?://[^\s\n]+)'
+        
+        for source_str_item in source_strings:
+            urls = re.findall(url_pattern, source_str_item)
+            all_urls.extend(urls)
+        
+        # Deduplicate while preserving order
+        seen = set()
+        unique_urls = []
+        for url in all_urls:
+            if url not in seen:
+                seen.add(url)
+                unique_urls.append(url)
+        
+        # Format sources with numbers
+        if unique_urls:
+            sources_section = "\n\n---\n\n## Sources\n\n"
+            for i, url in enumerate(unique_urls, 1):
+                sources_section += f"[{i}] {url}\n"
+            all_sections += sources_section
+            
+        return {
+            "final_report": all_sections, 
+            "source_str": state.source_str, 
+            "messages": state.messages + [AIMessage(content=all_sections)],
+            "sections": updated_sections
+        }
     else:
-        return {"final_report": all_sections, "messages": [AIMessage(content=all_sections)]}
+        return {
+            "final_report": all_sections, 
+            "messages": state.messages + [AIMessage(content=all_sections)],
+            "sections": updated_sections
+        }
 
 
-async def initiate_final_section_writing(state: ReportState):
+async def initiate_final_section_writing(state: DeepResearchState):
     return [
-        Send("write_final_sections", {"messages": state["messages"], "section": s, "report_sections_from_research": state["report_sections_from_research"]}) 
-        for s in state["sections"] 
+        Send("write_final_sections", {"messages": state.messages, "section": s, "report_sections_from_research": state.report_sections_from_research}) 
+        for s in state.sections 
         if not s.research
     ]
 
 
 ## Graph
-section_builder = StateGraph(SectionState, output=SectionOutputState)
+section_builder = StateGraph(DeepResearchState)
 section_builder.add_node("generate_queries", generate_queries)
 section_builder.add_node("search_web", search_web)
 section_builder.add_node("write_section", write_section)
@@ -313,7 +358,7 @@ section_builder.add_edge(START, "generate_queries")
 section_builder.add_edge("generate_queries", "search_web")
 section_builder.add_edge("search_web", "write_section")
 
-builder = StateGraph(ReportState, input=ReportStateInput, output=ReportStateOutput, config_schema=WorkflowConfiguration)
+builder = StateGraph(DeepResearchState, config_schema=WorkflowConfiguration)
 builder.add_node("clarify_with_user", clarify_with_user)
 builder.add_node("generate_report_plan", generate_report_plan)
 builder.add_node("human_feedback", human_feedback)
