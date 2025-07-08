@@ -1,10 +1,38 @@
-import streamlit as st
+"""Streamlit web application for Open Deep Research.
+
+This module provides the main web interface for the Open Deep Research application,
+allowing users to configure research settings and generate AI-powered research reports.
+"""
 import asyncio
+import datetime
 import os
-from typing import Dict, Any
 import sys
-from pathlib import Path
 import traceback
+from pathlib import Path
+
+import streamlit as st
+
+# Add the src directory to Python path
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+
+from open_deep_research.configuration import (
+    COMPREHENSIVE_REPORT_STRUCTURE,
+    DEFAULT_REPORT_STRUCTURE,
+    EXECUTIVE_SUMMARY_STRUCTURE,
+    SearchAPI,
+)
+from open_deep_research.dependency_manager import (
+    SearchProvider,
+    get_available_providers,
+    get_status_report,
+)
+from open_deep_research.graph import graph
+from open_deep_research.core.model_utils import trace_config
+from open_deep_research.model_registry import (
+    get_available_model_combos,
+    get_available_models,
+    supports_tool_choice,
+)
 
 # Safe environment variable loading with error handling
 ENV_LOAD_ERROR = None
@@ -20,31 +48,7 @@ except FileNotFoundError:
 except Exception as e:
     ENV_LOAD_ERROR = f"Environment file error: {str(e)}"
 
-# Add the src directory to Python path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
-
-from open_deep_research.graph import graph
-from open_deep_research.configuration import (
-    SearchAPI, 
-    WorkflowConfiguration,
-    DEFAULT_REPORT_STRUCTURE,
-    COMPREHENSIVE_REPORT_STRUCTURE,
-    EXECUTIVE_SUMMARY_STRUCTURE
-)
-from open_deep_research.dependency_manager import (
-    get_available_providers, 
-    get_status_report,
-    SearchProvider
-)
-from open_deep_research.model_registry import (
-    get_supported_models, 
-    supports_tool_choice, 
-    ModelRole, 
-    PREDEFINED_COMBOS,
-    get_available_model_combos,
-    get_available_models
-)
-from open_deep_research.error_tracker import error_tracker, FixStatus
+# Error tracker was removed - using simple error handling instead
 
 # Set page configuration
 st.set_page_config(
@@ -96,6 +100,11 @@ st.markdown("""
     h1 {
         color: #1e3a8a;
     }
+
+    /* Hide the link icon that Streamlit automatically adds to headers */
+    div[data-testid="stHeading"] a {
+        display: none;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -139,7 +148,7 @@ with st.sidebar:
     ]
     
     if len(available_provider_names) < len(PROVIDER_DISPLAY_NAMES):
-        st.warning(f"⚠️ Some search providers are not installed.")
+        st.warning("⚠️ Some search providers are not installed.")
         with st.expander("📋 View Provider Status"):
             st.text(get_status_report())
             
@@ -334,7 +343,7 @@ with col2:
         if 'research_task' in st.session_state and st.session_state.research_task:
             try:
                 st.session_state.research_task.cancel()
-            except:
+            except Exception:
                 pass  # Task might already be done or cancelled
         
         st.warning("🛑 Research stopped by user. You can start a new research session.")
@@ -371,12 +380,16 @@ if st.session_state.research_in_progress:
             
             # Run the research
             async def run_research():
+                """Execute the research workflow asynchronously with progress tracking.
+                
+                Returns:
+                    The final research report or error message
+                """
                 if st.session_state.should_stop_research:
                     return None
                 
                 try:
                     # Debug logging
-                    import datetime
                     with open("streamlit_debug.log", "a") as f:
                         f.write(f"\n\n{'='*50}\n")
                         f.write(f"Starting research at {datetime.datetime.now()}\n")
@@ -393,24 +406,36 @@ if st.session_state.research_in_progress:
                     final_state = await graph.ainvoke(
                         {"topic": research_topic},
                         config={
+                            **trace_config("streamlit-session"),
                             "configurable": config["configurable"],
-                            "recursion_limit": 100  # Increase recursion limit to handle complex research workflows
+                            "recursion_limit": 100
                         }
                     )
                     
                     progress_bar.progress(100)
                     status_text.text("Research complete!")
                     
-                    # Access the final_report from the state dictionary
+                    # Access the final_report from the state object (can be Pydantic model or dictionary)
                     if final_state is None:
                         return "Error: Graph execution returned no result. Please check your configuration and try again."
                     
-                    final_report = final_state.get("final_report") if isinstance(final_state, dict) else None
+                    # Handle both Pydantic model and dictionary returns
+                    final_report = None
+                    sections = []
+                    
+                    if isinstance(final_state, dict):
+                        # Dictionary case
+                        final_report = final_state.get("final_report")
+                        sections = final_state.get("sections", [])
+                    elif hasattr(final_state, 'final_report'):
+                        # Pydantic model case
+                        final_report = getattr(final_state, 'final_report', None)
+                        sections = getattr(final_state, 'sections', [])
+                    
                     if final_report:
                         return final_report
                     else:
                         # Try to get sections if final_report is not available
-                        sections = final_state.get("sections", []) if isinstance(final_state, dict) else []
                         if sections:
                             return f"Report generation incomplete. Generated {len(sections)} sections but final compilation failed."
                         else:
@@ -418,19 +443,22 @@ if st.session_state.research_in_progress:
                 
                 except Exception as e:
                     # Log the error to console for debugging
-                    print(f"Error during research execution:", file=sys.stderr)
                     traceback.print_exc()
 
                     error_msg = str(e)
                     
-                    # Log the error to file
-                    with open("streamlit_error.log", "a") as f:
-                        f.write(f"\n\n{'='*50}\n")
-                        f.write(f"Error at {asyncio.get_event_loop().time()}\n")
-                        f.write(f"Topic: {research_topic}\n")
-                        f.write(f"Models: {config['configurable']['planner_provider']}:{config['configurable']['planner_model']} / {config['configurable']['writer_provider']}:{config['configurable']['writer_model']}\n")
-                        f.write(f"Error: {error_msg}\n")
-                        f.write(f"Traceback:\n{traceback.format_exc()}\n")
+                    # Log the error to file with more robust error handling
+                    try:
+                        with open("streamlit_error.log", "a", encoding="utf-8") as f:
+                            f.write(f"\n\n{'='*50}\n")
+                            f.write(f"Error at {datetime.datetime.now()}\n")
+                            f.write(f"Topic: {research_topic}\n")
+                            f.write(f"Models: {config['configurable']['planner_provider']}:{config['configurable']['planner_model']} / {config['configurable']['writer_provider']}:{config['configurable']['writer_model']}\n")
+                            f.write(f"Error: {error_msg}\n")
+                            f.write(f"Traceback:\n{traceback.format_exc()}\n")
+                            f.flush()  # Ensure the log is written immediately
+                    except Exception:
+                        pass
                     
                     raise e
             
@@ -466,8 +494,13 @@ if st.session_state.research_in_progress:
                         st.session_state.research_in_progress = False
                         st.warning("🛑 Research was stopped. The system is cleaning up resources.")
                         # Log the error for debugging
-                        with open("streamlit_error.log", "a") as f:
-                            f.write(f"\n\nEvent loop shutdown error: {error_msg}\n")
+                        try:
+                            with open("streamlit_error.log", "a", encoding="utf-8") as f:
+                                f.write(f"\n\n{'='*50}\n")
+                                f.write(f"Event loop shutdown error at {datetime.datetime.now()}: {error_msg}\n")
+                                f.flush()
+                        except Exception:
+                            pass
                     else:
                         raise
                 finally:
@@ -481,7 +514,7 @@ if st.session_state.research_in_progress:
                         # Give tasks a chance to clean up
                         if pending:
                             loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
-                    except:
+                    except Exception:
                         pass  # Ignore errors during cleanup
                     
                     # Close the loop
@@ -500,22 +533,8 @@ if st.session_state.research_in_progress:
                 # Handle final error after all retries
                 st.session_state.research_in_progress = False
                 
-                # --- Automated Error Analysis ---
+                # --- Simple Error Analysis ---
                 error_msg = str(e)
-                known_error = error_tracker.check_error(error_msg)
-                
-                if known_error:
-                    status = known_error.get("status")
-                    desc = known_error.get("description")
-                    
-                    if status == FixStatus.USER_CONFIRMED.value:
-                        st.error(f"✅ **Resolved Error**: The error '{desc}' has a confirmed fix. Please update your code or restart the app.")
-                    elif status == FixStatus.CONFIRMED_BROKEN.value:
-                        st.error(f"❌ **Known Issue**: The error '{desc}' is a known issue where the current fix is ineffective. A new approach is needed.")
-                    elif status == FixStatus.NEEDS_VERIFICATION.value:
-                        st.warning(f"🤔 **Unverified Fix**: An attempted fix exists for '{desc}'. This test may help verify if it works.")
-                    else:
-                        st.error(f"🔍 **Known Issue**: This is a known issue tracked as '{desc}'.")
                 
                 # Provide specific error messages for common issues
                 if "context length" in error_msg.lower():
@@ -557,7 +576,6 @@ if st.session_state.research_in_progress:
                 else:
                     st.error(f"❌ **Unexpected Error**: {str(e)}")
                     # Also print traceback to console for unexpected errors
-                    print("Unexpected error details:", file=sys.stderr)
                     traceback.print_exc()
                     st.error("Check streamlit_error.log for full details")
 

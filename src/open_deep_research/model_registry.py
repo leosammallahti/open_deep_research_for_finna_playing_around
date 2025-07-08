@@ -16,6 +16,7 @@ from typing import Dict, List, Literal, TypedDict
 ModelRole = Literal["planner", "writer", "summarizer", "reflection"]
 
 class ModelCapabilities(TypedDict, total=False):
+    """Type definition for model capabilities and metadata."""
     supports_tool_choice: bool
     recommended_roles: List[ModelRole]
     context_window: int
@@ -96,6 +97,7 @@ MODEL_CAPABILITIES: Dict[str, ModelCapabilities] = {
 
 
 class ModelCombo(TypedDict):
+    """Type definition for predefined model combinations."""
     display_name: str
     planner: str
     writer: str
@@ -154,6 +156,14 @@ def get_supported_models(role: ModelRole | None = None, *, require_tool_choice: 
 
 
 def supports_tool_choice(model_id: str) -> bool:
+    """Check if a model supports tool choice/function calling.
+    
+    Args:
+        model_id: The model identifier (e.g., "openai:gpt-4o")
+        
+    Returns:
+        True if the model supports tool choice, False otherwise
+    """
     return MODEL_CAPABILITIES.get(model_id, {}).get("supports_tool_choice", False)
 
 def get_available_model_combos() -> Dict[str, ModelCombo]:

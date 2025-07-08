@@ -1,11 +1,16 @@
+from typing import List
+
 import pytest
-from src.open_deep_research.utils import filter_think_tokens
-from pydantic import BaseModel, Field
 from langchain.schema import HumanMessage
 from langchain.schema.runnable import Runnable
-from typing import List
-from src.open_deep_research.utils import get_structured_output_with_fallback
+from pydantic import BaseModel, Field
+
 from src.open_deep_research.models import FakeListChatModel
+from src.open_deep_research.utils import (
+    filter_think_tokens,
+    get_structured_output_with_fallback,
+)
+
 
 @pytest.mark.parametrize("input_text, expected_output", [
     # Standard case

@@ -1,43 +1,70 @@
-from typing import Literal
-from langchain.chat_models import init_chat_model
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, get_buffer_string
-from langchain_core.runnables import RunnableConfig
-from langgraph.graph import START, END, StateGraph
-from langgraph.types import Send, interrupt, Command
+"""Workflow implementation for Open Deep Research.
 
-from open_deep_research.pydantic_state import DeepResearchState
-from open_deep_research.workflow.configuration import WorkflowConfiguration
+This module implements the core workflow logic for the research pipeline,
+including node functions and workflow orchestration.
+"""
+import re
+from typing import Literal
+
+from langchain.chat_models import init_chat_model
+from langchain_core.messages import (
+    AIMessage,
+    HumanMessage,
+    SystemMessage,
+    get_buffer_string,
+)
+from langchain_core.runnables import RunnableConfig
+from langgraph.graph import END, START, StateGraph
+from langgraph.types import Command, Send, interrupt
+
+from open_deep_research.configuration import WorkflowConfiguration
+from open_deep_research.core import (
+    extract_configuration,
+    get_model_with_thinking_budget,
+    get_search_api_params,
+    initialize_model,
+    initialize_model_with_structured_output,
+)
 from open_deep_research.pydantic_state import (
     ClarifyWithUser,
-    SectionOutput
+    DeepResearchState,
+    SectionOutput,
 )
 from open_deep_research.state import (
-    Sections,
-    Queries,
     Feedback,
+    Queries,
+    Sections,
+)
+from open_deep_research.utils import (
+    format_sections,
+    get_config_value,
+    get_today_str,
+    select_and_execute_search,
 )
 from open_deep_research.workflow.prompts import (
     clarify_with_user_instructions,
-    report_planner_query_writer_instructions,
-    report_planner_instructions,
-    query_writer_instructions, 
-    section_writer_instructions,
     final_section_writer_instructions,
+    query_writer_instructions,
+    report_planner_instructions,
+    report_planner_query_writer_instructions,
     section_grader_instructions,
-    section_writer_inputs
+    section_writer_inputs,
+    section_writer_instructions,
 )
-from open_deep_research.utils import (
-    format_sections, 
-    get_config_value, 
-    get_search_params, 
-    select_and_execute_search,
-    get_today_str
-)
-import re
+
 
 ## Nodes
 def initial_router(state: DeepResearchState, config: RunnableConfig):
-    configurable = WorkflowConfiguration.from_runnable_config(config)
+    """Route to the appropriate starting node based on configuration.
+    
+    Args:
+        state: Current state of the deep research workflow
+        config: Configuration settings for the workflow
+        
+    Returns:
+        Name of the next node to execute
+    """
+    configurable = extract_configuration(config, WorkflowConfiguration)
     if configurable.clarify_with_user and not state.already_clarified_topic:
         return "clarify_with_user"
     else:
@@ -45,8 +72,17 @@ def initial_router(state: DeepResearchState, config: RunnableConfig):
 
 
 async def clarify_with_user(state: DeepResearchState, config: RunnableConfig):
+    """Ask the user for clarification on the research topic.
+    
+    Args:
+        state: Current state of the deep research workflow
+        config: Configuration settings for the workflow
+        
+    Returns:
+        Updated state with clarification question and flag set
+    """
     messages = state.messages
-    configurable = WorkflowConfiguration.from_runnable_config(config)
+    configurable = extract_configuration(config, WorkflowConfiguration)
     writer_provider = get_config_value(configurable.writer_provider)
     writer_model_name = get_config_value(configurable.writer_model)
     writer_model_kwargs = get_config_value(configurable.writer_model_kwargs or {})
@@ -59,16 +95,23 @@ async def clarify_with_user(state: DeepResearchState, config: RunnableConfig):
 
 
 async def generate_report_plan(state: DeepResearchState, config: RunnableConfig) -> Command[Literal["human_feedback","build_section_with_web_research"]]:
+    """Generate a structured report plan with sections based on the topic and research.
+    
+    Args:
+        state: Current state of the deep research workflow
+        config: Configuration settings for the workflow
+        
+    Returns:
+        Command directing to next step (human feedback or section building)
+    """
     messages = state.messages
     feedback_list = state.feedback_on_report_plan
     feedback = " /// ".join(feedback_list) if feedback_list else ""
 
-    configurable = WorkflowConfiguration.from_runnable_config(config)
+    configurable = extract_configuration(config, WorkflowConfiguration)
     report_structure = configurable.report_structure
     number_of_queries = configurable.number_of_queries
-    search_api = get_config_value(configurable.search_api)
-    search_api_config = configurable.search_api_config or {}  # Get the config dict, default to empty
-    params_to_pass = get_search_params(search_api, search_api_config)  # Filter parameters
+    params_to_pass = get_search_api_params(configurable)
     sections_user_approval = configurable.sections_user_approval
 
     if isinstance(report_structure, dict):
@@ -77,8 +120,9 @@ async def generate_report_plan(state: DeepResearchState, config: RunnableConfig)
     writer_provider = get_config_value(configurable.writer_provider)
     writer_model_name = get_config_value(configurable.writer_model)
     writer_model_kwargs = get_config_value(configurable.writer_model_kwargs or {})
-    writer_model = init_chat_model(model=writer_model_name, model_provider=writer_provider, model_kwargs=writer_model_kwargs) 
-    structured_llm = writer_model.with_structured_output(Queries)
+    structured_llm = initialize_model_with_structured_output(
+        writer_provider, writer_model_name, Queries, writer_model_kwargs
+    )
 
     system_instructions_query = report_planner_query_writer_instructions.format(
         messages=get_buffer_string(messages),
@@ -90,29 +134,20 @@ async def generate_report_plan(state: DeepResearchState, config: RunnableConfig)
                                      HumanMessage(content="Generate search queries that will help with planning the sections of the report.")])
     
     query_list = [query.search_query for query in results.queries]
+    search_api = get_config_value(configurable.search_api)
     source_str = await select_and_execute_search(search_api, query_list, params_to_pass)
     system_instructions_sections = report_planner_instructions.format(messages=get_buffer_string(messages), report_organization=report_structure, context=source_str, feedback=feedback)
 
     planner_provider = get_config_value(configurable.planner_provider)
     planner_model = get_config_value(configurable.planner_model)
-    planner_model_kwargs = get_config_value(configurable.planner_model_kwargs or {})
+    get_config_value(configurable.planner_model_kwargs or {})
 
     planner_message = """Generate the sections of the report. Your response must include a 'sections' field containing a list of sections. 
                         Each section must have: name, description, research, and content fields."""
     
-    if planner_model == "claude-3-7-sonnet-latest":
-        # Allocate a thinking budget for claude-3-7-sonnet-latest as the planner model
-        planner_llm = init_chat_model(model=planner_model, 
-                                      model_provider=planner_provider, 
-                                      max_tokens=20_000, 
-                                      thinking={"type": "enabled", "budget_tokens": 16_000})
-    else:
-        # With other models, thinking tokens are not specifically allocated
-        planner_llm = init_chat_model(model=planner_model, 
-                                      model_provider=planner_provider,
-                                      model_kwargs=planner_model_kwargs)
-    
-    structured_llm = planner_llm.with_structured_output(Sections)
+    structured_llm = get_model_with_thinking_budget(
+        planner_provider, planner_model
+    ).with_structured_output(Sections)
     report_sections = await structured_llm.ainvoke([SystemMessage(content=system_instructions_sections),
                                              HumanMessage(content=planner_message)])
     sections = report_sections.sections
@@ -128,6 +163,15 @@ async def generate_report_plan(state: DeepResearchState, config: RunnableConfig)
 
 
 async def human_feedback(state: DeepResearchState, config: RunnableConfig) -> Command[Literal["generate_report_plan","build_section_with_web_research"]]:
+    """Collect human feedback on the report plan and route accordingly.
+    
+    Args:
+        state: Current state of the deep research workflow
+        config: Configuration settings for the workflow
+        
+    Returns:
+        Command directing to report plan regeneration or section building
+    """
     messages = state.messages
     sections = state.sections
     sections_str = "\n\n".join(
@@ -154,18 +198,28 @@ async def human_feedback(state: DeepResearchState, config: RunnableConfig) -> Co
 
 
 async def generate_queries(state: DeepResearchState, config: RunnableConfig):
+    """Generate search queries for a specific report section.
+    
+    Args:
+        state: Current state of the deep research workflow
+        config: Configuration settings for the workflow
+        
+    Returns:
+        Updated state with search queries for the section
+    """
     messages = state.messages
     section = state.section
     if not section:
         raise ValueError("Section not found in state.")
         
-    configurable = WorkflowConfiguration.from_runnable_config(config)
+    configurable = extract_configuration(config, WorkflowConfiguration)
     number_of_queries = configurable.number_of_queries
     writer_provider = get_config_value(configurable.writer_provider)
     writer_model_name = get_config_value(configurable.writer_model)
     writer_model_kwargs = get_config_value(configurable.writer_model_kwargs or {})
-    writer_model = init_chat_model(model=writer_model_name, model_provider=writer_provider, model_kwargs=writer_model_kwargs) 
-    structured_llm = writer_model.with_structured_output(Queries)
+    structured_llm = initialize_model_with_structured_output(
+        writer_provider, writer_model_name, Queries, writer_model_kwargs
+    )
     system_instructions = query_writer_instructions.format(messages=get_buffer_string(messages), 
                                                            section_topic=section.description, 
                                                            number_of_queries=number_of_queries,
@@ -177,19 +231,36 @@ async def generate_queries(state: DeepResearchState, config: RunnableConfig):
 
 
 async def search_web(state: DeepResearchState, config: RunnableConfig):
+    """Execute web search using generated queries and return results.
+    
+    Args:
+        state: Current state of the deep research workflow
+        config: Configuration settings for the workflow
+        
+    Returns:
+        Updated state with search results and incremented search iterations
+    """
     search_queries = state.search_queries
-    configurable = WorkflowConfiguration.from_runnable_config(config)
-    search_api = get_config_value(configurable.search_api)
-    search_api_config = configurable.search_api_config or {}
-    params_to_pass = get_search_params(search_api, search_api_config)
+    configurable = extract_configuration(config, WorkflowConfiguration)
+    params_to_pass = get_search_api_params(configurable)
 
     query_list = [query.search_query for query in search_queries]
+    search_api = get_config_value(configurable.search_api)
     source_str = await select_and_execute_search(search_api, query_list, params_to_pass)
 
     return {"source_str": source_str, "search_iterations": state.search_iterations + 1}
 
 
 async def write_section(state: DeepResearchState, config: RunnableConfig):
+    """Write a report section based on search results and grade the output.
+    
+    Args:
+        state: Current state of the deep research workflow
+        config: Configuration settings for the workflow
+        
+    Returns:
+        Command directing to next step (more research or completion)
+    """
     messages = state.messages
     section = state.section
     source_str = state.source_str
@@ -202,12 +273,10 @@ async def write_section(state: DeepResearchState, config: RunnableConfig):
     writer_provider = get_config_value(configurable.writer_provider)
     writer_model_name = get_config_value(configurable.writer_model)
     writer_model_kwargs = get_config_value(configurable.writer_model_kwargs or {})
-    writer_model = init_chat_model(
-        model=writer_model_name,
-        model_provider=writer_provider,
-        model_kwargs=writer_model_kwargs,
+    writer_model = initialize_model_with_structured_output(
+        writer_provider, writer_model_name, SectionOutput, writer_model_kwargs,
         max_retries=configurable.max_structured_output_retries
-    ).with_structured_output(SectionOutput)
+    )
 
     section_content = await writer_model.ainvoke([SystemMessage(content=section_writer_instructions),
                                            HumanMessage(content=section_writer_inputs_formatted)])
@@ -226,19 +295,11 @@ async def write_section(state: DeepResearchState, config: RunnableConfig):
 
     planner_provider = get_config_value(configurable.planner_provider)
     planner_model = get_config_value(configurable.planner_model)
-    planner_model_kwargs = get_config_value(configurable.planner_model_kwargs or {})
+    get_config_value(configurable.planner_model_kwargs or {})
 
-    if planner_model == "claude-3-7-sonnet-latest":
-        # Allocate a thinking budget for claude-3-7-sonnet-latest as the planner model
-        reflection_model = init_chat_model(model=planner_model, 
-                                           model_provider=planner_provider, 
-                                           max_tokens=20_000, 
-                                           thinking={"type": "enabled", "budget_tokens": 16_000}).with_structured_output(Feedback)
-    else:
-        reflection_model = init_chat_model(model=planner_model, 
-                                           model_provider=planner_provider,
-                                           max_retries=configurable.max_structured_output_retries,
-                                           model_kwargs=planner_model_kwargs).with_structured_output(Feedback)
+    reflection_model = get_model_with_thinking_budget(
+        planner_provider, planner_model
+    ).with_structured_output(Feedback)
 
     feedback = await reflection_model.ainvoke([SystemMessage(content=section_grader_instructions_formatted),
                                         HumanMessage(content=section_grader_message)])
@@ -256,26 +317,44 @@ async def write_section(state: DeepResearchState, config: RunnableConfig):
 
 
 async def write_final_sections(state: DeepResearchState, config: RunnableConfig):
+    """Write final sections of the report without additional research.
+    
+    Args:
+        state: Current state of the deep research workflow
+        config: Configuration settings for the workflow
+        
+    Returns:
+        Updated state with completed sections
+    """
     configurable = WorkflowConfiguration.from_runnable_config(config)
     writer_provider = get_config_value(configurable.writer_provider)
     writer_model_name = get_config_value(configurable.writer_model)
     writer_model_kwargs = get_config_value(configurable.writer_model_kwargs or {})
-    writer_model = init_chat_model(model=writer_model_name, model_provider=writer_provider, model_kwargs=writer_model_kwargs) 
+    writer_model = initialize_model(writer_provider, writer_model_name, writer_model_kwargs) 
 
-    messages = state["messages"]
-    section = state["section"]
-    completed_report_sections = state["report_sections_from_research"]
+    messages = state.messages
+    section = state.section
+    completed_report_sections = state.report_sections_from_research
     system_instructions = final_section_writer_instructions.format(messages=get_buffer_string(messages), 
                                                                    section_name=section.name, 
                                                                    section_topic=section.description, 
                                                                    context=completed_report_sections)
     section_content = await writer_model.ainvoke([SystemMessage(content=system_instructions),
                                            HumanMessage(content="Generate a report section based on the provided sources.")])   
-    section.content = section_content.content
-    return {"completed_sections": [section]}
+    updated_section = section.model_copy(update={'content': section_content.content})
+    # Return the single section - LangGraph will automatically merge with existing completed_sections
+    return {"completed_sections": [updated_section]}
 
 
 async def gather_completed_sections(state: DeepResearchState):
+    """Gather all completed sections and format them for the final report.
+    
+    Args:
+        state: Current state of the deep research workflow
+        
+    Returns:
+        Updated state with formatted report sections
+    """
     completed_sections = state.completed_sections
     completed_report_sections = format_sections(completed_sections)
 
@@ -283,6 +362,15 @@ async def gather_completed_sections(state: DeepResearchState):
 
 
 async def compile_final_report(state: DeepResearchState, config: RunnableConfig):
+    """Compile the final report from all completed sections.
+    
+    Args:
+        state: Current state of the deep research workflow
+        config: Configuration settings for the workflow
+        
+    Returns:
+        Updated state with the final compiled report
+    """
     configurable = WorkflowConfiguration.from_runnable_config(config)
     
     completed_sections_map = {s.name: s.content for s in state.completed_sections}
@@ -341,9 +429,33 @@ async def compile_final_report(state: DeepResearchState, config: RunnableConfig)
         }
 
 
+async def gather_all_sections(state: DeepResearchState):
+    """Wait for all parallel write_final_sections to complete.
+    
+    This node serves as a proper fan-in point for the parallel final section writing,
+    ensuring all sections are completed before proceeding to final report compilation.
+    """
+    # LangGraph automatically waits for all parallel nodes to complete before executing this
+    return {}
+
+
 async def initiate_final_section_writing(state: DeepResearchState):
+    """Initiate the writing of final sections that don't need research.
+    
+    Args:
+        state: Current state of the deep research workflow
+        
+    Returns:
+        List of Send commands for final section writing
+    """
     return [
-        Send("write_final_sections", {"messages": state.messages, "section": s, "report_sections_from_research": state.report_sections_from_research}) 
+        Send("write_final_sections", DeepResearchState(
+            messages=state.messages, 
+            section=s, 
+            report_sections_from_research=state.report_sections_from_research,
+            completed_sections=state.completed_sections,
+            source_str=state.source_str
+        ))
         for s in state.sections 
         if not s.research
     ]
@@ -366,10 +478,12 @@ builder.add_node("build_section_with_web_research", section_builder.compile())
 builder.add_node("gather_completed_sections", gather_completed_sections)
 builder.add_node("write_final_sections", write_final_sections)
 builder.add_node("compile_final_report", compile_final_report)
+builder.add_node("gather_all_sections", gather_all_sections)
 builder.add_conditional_edges(START, initial_router, ["clarify_with_user", "generate_report_plan"])
 builder.add_edge("clarify_with_user", END)
 builder.add_edge("build_section_with_web_research", "gather_completed_sections")
 builder.add_conditional_edges("gather_completed_sections", initiate_final_section_writing, ["write_final_sections"])
-builder.add_edge("write_final_sections", "compile_final_report")
+builder.add_edge("write_final_sections", "gather_all_sections")
+builder.add_edge("gather_all_sections", "compile_final_report")
 builder.add_edge("compile_final_report", END)
 workflow = builder.compile()

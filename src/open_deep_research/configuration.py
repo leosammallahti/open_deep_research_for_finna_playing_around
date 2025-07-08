@@ -1,9 +1,15 @@
+"""Configuration management for Open Deep Research application.
+
+This module provides configuration classes and enums for managing research workflows,
+search providers, model providers, and report structure settings.
+"""
 import os
+from dataclasses import dataclass, fields
 from enum import Enum
-from dataclasses import dataclass, fields, field
-from typing import Any, Optional, Dict, Literal
+from typing import Any, Dict, Literal
 
 from langchain_core.runnables import RunnableConfig
+
 from open_deep_research.model_registry import ModelRole
 
 DEFAULT_REPORT_STRUCTURE = """Create a concise report on the user-provided topic:
@@ -53,6 +59,7 @@ EXECUTIVE_SUMMARY_STRUCTURE = """Create a high-level executive summary on the us
    - Suggest clear next steps"""
 
 class SearchAPI(Enum):
+    """Enumeration of supported search API providers."""
     PERPLEXITY = "perplexity"
     TAVILY = "tavily"
     EXA = "exa"
@@ -68,7 +75,7 @@ class BaseConfiguration:
     """Base configuration with common fields."""
     report_structure: str = DEFAULT_REPORT_STRUCTURE
     search_api: SearchAPI = SearchAPI.TAVILY
-    search_api_config: Optional[Dict[str, Any]] = None
+    search_api_config: Dict[str, Any] | None = None
     process_search_results: Literal["summarize", "split_and_rerank"] | None = None
     summarization_model_provider: str | None = None
     summarization_model: str | None = None
@@ -81,17 +88,19 @@ class WorkflowConfiguration(BaseConfiguration):
     # Workflow-specific configuration
     number_of_queries: int = 1 # Number of search queries to generate per iteration
     max_search_depth: int = 2 # Maximum number of reflection + search iterations
+    clarify_with_user: bool = False # Whether to ask for clarification from the user
+    sections_user_approval: bool = False # Whether to require user approval of report plan
     planner_provider: str = "together"
     planner_model: str = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
-    planner_model_kwargs: Optional[Dict[str, Any]] = None
+    planner_model_kwargs: Dict[str, Any] | None = None
     writer_provider: str = "together"
     writer_model: str = "meta-llama/Llama-3.3-70B-Instruct-Turbo"
-    writer_model_kwargs: Optional[Dict[str, Any]] = None
+    writer_model_kwargs: Dict[str, Any] | None = None
     reflection_model_provider: str | None = None
     reflection_model: str | None = None
 
     def get_model_for_role(self, role: ModelRole) -> tuple[str, str, str | None]:
-        """Returns (provider, model_name, full_model_id) for a given role."""
+        """Get (provider, model_name, full_model_id) for a given role."""
         if role == "planner":
             provider = self.planner_provider
             model = self.planner_model
@@ -114,7 +123,7 @@ class WorkflowConfiguration(BaseConfiguration):
 
     @classmethod
     def from_runnable_config(
-        cls, config: Optional[RunnableConfig] = None
+        cls, config: RunnableConfig | None = None
     ) -> "WorkflowConfiguration":
         """Create a WorkflowConfiguration instance from a RunnableConfig."""
         configurable = (
@@ -152,13 +161,13 @@ class MultiAgentConfiguration(BaseConfiguration):
     researcher_model: str = "together:meta-llama/Llama-3.3-70B-Instruct-Turbo"
     ask_for_clarification: bool = False # Whether to ask for clarification from the user
     # MCP server configuration
-    mcp_server_config: Optional[Dict[str, Any]] = None
-    mcp_prompt: Optional[str] = None
-    mcp_tools_to_include: Optional[list[str]] = None
+    mcp_server_config: Dict[str, Any] | None = None
+    mcp_prompt: str | None = None
+    mcp_tools_to_include: list[str] | None = None
 
     @classmethod
     def from_runnable_config(
-        cls, config: Optional[RunnableConfig] = None
+        cls, config: RunnableConfig | None = None
     ) -> "MultiAgentConfiguration":
         """Create a MultiAgentConfiguration instance from a RunnableConfig."""
         configurable = (
@@ -183,5 +192,4 @@ class MultiAgentConfiguration(BaseConfiguration):
         
         return cls(**values)
 
-# Keep the old Configuration class for backward compatibility
-Configuration = WorkflowConfiguration
+# Legacy alias removed - use WorkflowConfiguration or MultiAgentConfiguration explicitly

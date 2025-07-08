@@ -1,6 +1,7 @@
-import pytest
-from open_deep_research.pydantic_state import DeepResearchState, Section
 from langchain_core.messages import HumanMessage
+
+from open_deep_research.pydantic_state import DeepResearchState, Section
+
 
 def test_deep_research_state_instantiation():
     """

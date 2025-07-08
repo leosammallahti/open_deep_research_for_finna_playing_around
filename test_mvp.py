@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-Test script to demonstrate the improved MVP functionality.
+"""Test script to demonstrate the improved MVP functionality.
+
 This shows how the refactored DeepSeek integration and robust search work.
 """
 import asyncio
@@ -10,17 +10,14 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from open_deep_research.graph import graph
 from open_deep_research.configuration import SearchAPI
+from open_deep_research.graph import graph
+from open_deep_research.core.model_utils import trace_config
+
 
 async def test_mvp():
     """Test the improved MVP with different configurations."""
-    
-    print("🔍 Testing Open Deep Research MVP")
-    print("=" * 50)
-    
     # Test 1: Basic functionality with DuckDuckGo (no API key needed)
-    print("\n1. Testing with DuckDuckGo (robust default)")
     config = {
         "configurable": {
             "search_api": SearchAPI.DUCKDUCKGO,
@@ -35,18 +32,15 @@ async def test_mvp():
     
     try:
         # Test with a simple topic
-        result = await graph.ainvoke(
+        await graph.ainvoke(
             {"topic": "Benefits of renewable energy"}, 
-            config=config
+            config={**config, **trace_config("mvp-test-1")}
         )
-        print("✅ DuckDuckGo search test: SUCCESS")
-        print(f"Generated {len(result.get('sections', []))} sections")
         
-    except Exception as e:
-        print(f"❌ DuckDuckGo test failed: {e}")
+    except Exception:
+        pass
     
     # Test 2: Test DeepSeek integration (if API key available)
-    print("\n2. Testing DeepSeek integration (refactored)")
     deepseek_config = {
         "configurable": {
             "search_api": SearchAPI.DUCKDUCKGO,  # Use robust default
@@ -60,24 +54,14 @@ async def test_mvp():
     }
     
     try:
-        result = await graph.ainvoke(
+        await graph.ainvoke(
             {"topic": "AI in healthcare"}, 
-            config=deepseek_config
+            config={**deepseek_config, **trace_config("mvp-test-2")}
         )
-        print("✅ DeepSeek integration test: SUCCESS")
-        print("✅ No more tool_choice errors!")
         
-    except Exception as e:
-        print(f"⚠️  DeepSeek test: {e}")
-        print("   (This is expected if you don't have a DeepSeek API key)")
+    except Exception:
+        pass
     
-    print("\n" + "=" * 50)
-    print("🎉 MVP Testing Complete!")
-    print("\nKey Improvements:")
-    print("- ✅ DeepSeek integration refactored (no more custom workarounds)")
-    print("- ✅ Robust search handling (no more 'None' search crashes)")
-    print("- ✅ Centralized configuration via environment variables")
-    print("- ✅ Updated dependencies for better compatibility")
 
 if __name__ == "__main__":
     asyncio.run(test_mvp()) 

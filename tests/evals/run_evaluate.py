@@ -1,12 +1,12 @@
-from langsmith import Client
-from tests.evals.evaluators import eval_overall_quality, eval_relevance, eval_structure
-from tests.evals.target import generate_report_multi_agent
-from dotenv import load_dotenv
-import os
 import asyncio
 from typing import Literal
+
+from dotenv import load_dotenv
 from langchain_core.messages import MessageLikeRepresentation
+from langsmith import Client
+
 from open_deep_research.multi_agent import supervisor_builder
+from tests.evals.evaluators import eval_overall_quality, eval_relevance, eval_structure
 
 load_dotenv("../.env")
 
@@ -82,4 +82,3 @@ async def main():
 
 if __name__ == "__main__":
     results = asyncio.run(main())
-    print(results)

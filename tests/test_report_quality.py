@@ -1,20 +1,19 @@
 #!/usr/bin/env python
 
+import asyncio
 import os
 import uuid
-import pytest
-import asyncio
-from pydantic import BaseModel, Field
-from langchain.chat_models import init_chat_model
-from langsmith import testing as t
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-from rich.text import Text
-from rich.markdown import Markdown
 
+import pytest
+from langchain.chat_models import init_chat_model
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import Command
+from langsmith import testing as t
+from pydantic import BaseModel, Field
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.table import Table
 
 # Import the report generation agents
 from open_deep_research.graph import builder
@@ -219,7 +218,7 @@ def test_response_criteria_evaluation(research_agent, search_api, models, eval_m
             # Run the graph until the interruption
             async for event in graph.astream({"topic":topic_query}, thread, stream_mode="updates"):
                 if '__interrupt__' in event:
-                    interrupt_value = event['__interrupt__'][0].value
+                    event['__interrupt__'][0].value
 
             # Pass True to approve the report plan and proceed to write the report
             async for event in graph.astream(Command(resume=True), thread, stream_mode="updates"):
