@@ -1,0 +1,98 @@
+# .cursorrules for Open Deep Research Project
+
+## Project Overview
+This is an experimental, fully open-source research assistant that automates deep research and produces comprehensive reports. It uses LangGraph for workflow orchestration, supports multiple AI models, and integrates with various search APIs.
+
+## Architecture Context
+- **Framework**: LangGraph with Python 3.11+
+- **State Management**: Immutable Pydantic models (DeepResearchState)
+- **Multi-Agent System**: Supervisor-researcher architecture with parallel processing
+- **Search Integration**: Multiple APIs (Tavily, Perplexity, Exa, ArXiv, PubMed, etc.)
+- **AI Models**: Flexible per-role model selection (planning, writing, summarization)
+
+## Code Standards and Patterns
+
+### Python Style Guidelines
+- Follow PEP 8 style guidelines
+- Use type hints throughout (prefer strict typing)
+- Prefer immutable data structures and functional programming patterns
+- Use Pydantic models for data validation and serialization
+- Follow the existing pattern of using `model_copy()` for state updates
+
+### LangGraph Specific Patterns
+- Use `@workflow.step` decorators for workflow nodes
+- Implement proper state management with immutable updates
+- Follow the existing pattern for tool integration
+- Use structured output formats for AI model responses
+
+### Error Handling
+- Always implement proper error handling with specific exception types
+- Use structured logging for debugging and monitoring
+- Implement graceful degradation when models don't support function calling
+- Include fallback strategies for tool failures
+
+### Model Integration
+- Use the `init_chat_model()` API for model initialization
+- Implement proper model configuration validation
+- Support both function-calling and non-function-calling models
+- Clean output artifacts like `<think>` tokens automatically
+
+## File Organization Preferences
+- Keep workflow definitions in `src/open_deep_research/workflow/`
+- Place model configurations in `src/open_deep_research/model_registry.py`
+- Store prompts in dedicated prompt files
+- Maintain separate files for different search tool integrations
+
+## Dependencies and Package Management
+- Use `uv` for package management (modern Python packaging)
+- Follow the existing pyproject.toml structure
+- Add new dependencies to pyproject.toml, not requirements.txt
+- Use virtual environments for development
+
+## Testing Conventions
+- Write tests for all new workflow nodes
+- Test model integration with different providers
+- Include integration tests for search tool functionality
+- Test error handling and fallback mechanisms
+
+## Documentation Standards
+- Use docstrings for all public functions and classes
+- Include examples in documentation
+- Update README.md for new features
+- Maintain API documentation for public interfaces
+
+## AI Model Interaction Guidelines
+- When suggesting model configurations, consider the project's flexible model selection system
+- Be aware of models that don't support function calling (like deepseek-reasoner)
+- Suggest appropriate fallback strategies for tool integration
+- Consider the multi-agent architecture when proposing changes
+
+## Search Tool Integration
+- Follow existing patterns for new search tool integrations
+- Implement proper rate limiting and error handling
+- Use structured output formats for search results
+- Consider the unified search interface design
+
+## State Management Rules
+- Always use immutable state updates with `model_copy()`
+- Maintain type safety in state transitions
+- Follow the existing DeepResearchState schema
+- Document state changes in workflow nodes
+
+## Code Review Focus Areas
+- Verify type safety and proper error handling
+- Check for consistent use of the project's patterns
+- Ensure proper integration with the existing architecture
+- Validate that new code follows the immutable state pattern
+
+## Performance Considerations
+- Consider the impact of model selection on performance
+- Implement efficient search result processing
+- Use parallel processing where appropriate (multi-agent pattern)
+- Monitor and optimize LangGraph workflow execution
+
+## Security Guidelines
+- Secure handling of API keys and sensitive configuration
+- Validate input data using Pydantic models
+- Implement proper sanitization of AI model outputs
+- Follow best practices for external API integration 

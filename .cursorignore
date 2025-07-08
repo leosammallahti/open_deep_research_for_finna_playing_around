@@ -1,0 +1,63 @@
+# Python and build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Cache directories
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Log files
+*.log
+logs/
+streamlit_debug.log
+streamlit_error.log
+
+# Test and coverage
+.coverage
+htmlcov/
+.tox/
+
+# Large generated files
+blame_output.txt
+uv.lock
+
+# LangGraph specific
+.langgraph/
+.langgraph_api/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Documentation that's not project-specific
+LICENSE
+
+# Git
+.git/ 

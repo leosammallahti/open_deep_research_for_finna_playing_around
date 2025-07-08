@@ -100,3 +100,24 @@ For the simplest setup with good results:
 - **Balanced**: Mix of Claude Sonnet and Haiku
 - **Budget**: GPT-3.5 Turbo (lowest cost, good quality)
 - **Free Search**: DuckDuckGo (no API key needed) 
+
+## Tavily Search Parameters (New)
+
+When `search_api` is set to `tavily`, the following optional keys can be provided under `search_api_config` to fine-tune the query.  All parameters map 1-to-1 to Tavily’s REST API and are passed through automatically by the new `langchain-tavily` integration.
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `max_results` | `int` | Maximum results per query (default `5`). |
+| `topic` | `"general" \| "news" \| "finance"` | High-level category filter. |
+| `search_depth` | `"basic" \| "advanced"` | Use `"advanced"` for higher-relevance snippets. |
+| `chunks_per_source` | `int` | Number of content chunks to return when `search_depth="advanced"`. |
+| `time_range` | `"day" \| "week" \| "month" \| "year"` | Restrict results to recent content. |
+| `include_domains` | `List[str]` | Whitelist domains (e.g. `["wikipedia.org"]`). |
+| `exclude_domains` | `List[str]` | Blacklist domains. |
+| `include_images` | `bool` | Return query-relevant images. |
+
+### Two-step Search → Extract flow
+
+By default the framework now fetches only snippets during the initial search and then automatically uses Tavily’s **Extract** API to pull full page content for the top URLs (up to 20 per search).  This saves credits and keeps the initial response light-weight.  No configuration is required; the behaviour is built in.
+
+If you prefer the legacy one-shot behaviour (attach full `raw_content` in the search call) you can set `include_raw_content=True` in your `search_api_config`, but this will cost extra credits. 

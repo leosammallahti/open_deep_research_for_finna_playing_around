@@ -1,31 +1,34 @@
-from typing import List, Annotated, TypedDict, Literal, cast
-from pydantic import BaseModel, Field
+"""Multi-agent system for research report generation.
+
+This module implements a multi-agent architecture for generating research reports
+using LangGraph. It includes supervisor and research agents that work together
+to create comprehensive reports by orchestrating search tools and writing content.
+"""
 import operator
-import warnings
 import re
-import json
+import warnings
+from typing import Annotated, List, cast
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage, BaseMessage
-from langchain_core.tools import tool, BaseTool
 from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import BaseTool, tool
 from langchain_mcp_adapters.client import MultiServerMCPClient
-from langgraph.graph import MessagesState
-
-from langgraph.types import Command, Send
-from langgraph.graph import START, END, StateGraph
+from langgraph.graph import END, START, MessagesState, StateGraph
+from langgraph.types import Send
+from pydantic import BaseModel, Field
 
 from open_deep_research.configuration import MultiAgentConfiguration
+from open_deep_research.prompts import RESEARCH_INSTRUCTIONS, SUPERVISOR_INSTRUCTIONS
+
+# New Tavily tool from dedicated module
+from open_deep_research.tavily_tools import tavily_search_tool
 from open_deep_research.utils import (
-    tavily_search,
     duckduckgo_search,
     get_today_str,
-    truncate_messages_for_context,
-    count_messages_tokens,
     summarize_search_results,
+    truncate_messages_for_context,
 )
-
-from open_deep_research.prompts import SUPERVISOR_INSTRUCTIONS, RESEARCH_INSTRUCTIONS
 
 # Model configuration for handling different model capabilities
 MODEL_CONFIGS = {
@@ -104,7 +107,8 @@ def bind_tools_with_model_support(llm, tools, model_name: str, parallel_tool_cal
 def get_search_tool(config: RunnableConfig):
     """Get the appropriate search tool based on configuration"""
     configurable = MultiAgentConfiguration.from_runnable_config(config)
-    search_api = configurable.search_api.value
+    from open_deep_research.core.config_utils import get_config_value
+    search_api = get_config_value(configurable.search_api)
 
     # Return None if no search tool is requested
     if search_api.lower() == "none":
@@ -112,7 +116,7 @@ def get_search_tool(config: RunnableConfig):
 
     # TODO: Configure other search functions as tools
     if search_api.lower() == "tavily":
-        search_tool = tavily_search
+        search_tool = tavily_search_tool
     elif search_api.lower() == "duckduckgo":
         search_tool = duckduckgo_search
     else:
@@ -251,8 +255,7 @@ async def get_research_tools(config: RunnableConfig) -> list[BaseTool]:
 
 
 async def supervisor(state: ReportState, config: RunnableConfig):
-    """LLM decides whether to call a tool or not"""
-    
+    """LLM decides whether to call a tool or not."""
     # Get configuration
     configurable = MultiAgentConfiguration.from_runnable_config(config)
     supervisor_model = configurable.supervisor_model
@@ -270,12 +273,11 @@ async def supervisor(state: ReportState, config: RunnableConfig):
 
     # **NEW: Truncate messages to prevent context length errors**
     # Use a conservative limit to leave room for tool calls and responses
-    max_tokens = 60000  # Leave 5536 tokens for tools and response
+    max_context_tokens = 60000  # Leave tokens for tools and response
     messages = await truncate_messages_for_context(
         messages,
-        model=supervisor_model,  # Add the missing model parameter
-        max_tokens=max_tokens,
-        preserve_recent=3  # Keep recent context
+        max_context_tokens=max_context_tokens,
+        model_name=supervisor_model
     )
 
     # Get tools based on configuration
@@ -307,7 +309,7 @@ async def supervisor(state: ReportState, config: RunnableConfig):
     return {"messages": [response]}
 
 async def supervisor_tools(state: ReportState, config: RunnableConfig):
-    """Performs the tool call and sends to the research agent"""
+    """Perform the tool call and send to the research agent."""
     configurable = MultiAgentConfiguration.from_runnable_config(config)
 
     result: List[BaseMessage] = []
@@ -379,13 +381,14 @@ async def supervisor_tools(state: ReportState, config: RunnableConfig):
     # After processing all tool calls, decide what to do next
     if sections_list:
         # Send the sections to the research agents
+        send_commands = []
         for s in sections_list:
-            result.append(Send(to="research_team", content={"section": s}))
-        state_update = {"messages": result}
+            send_commands.append(Send("research_team", {"section": s}))
+        return send_commands
     elif intro_content:
         # Store introduction while waiting for conclusion
         # Append to messages to guide the LLM to write conclusion next
-        result.append(cast(BaseMessage, {"role": "user", "content": "Introduction written. Now write a conclusion section."}))
+        result.append(AIMessage(content="Introduction written. Now write a conclusion section."))
         state_update = {
             "final_report": intro_content,
             "messages": result,
@@ -424,7 +427,7 @@ async def supervisor_tools(state: ReportState, config: RunnableConfig):
                 complete_report += sources_section
         
         # Append to messages to indicate completion
-        result.append(cast(BaseMessage, {"role": "user", "content": "Report is now complete with introduction, body sections, and conclusion."}))
+        result.append(AIMessage(content="Report is now complete with introduction, body sections, and conclusion."))
 
         state_update = {
             "final_report": complete_report,
@@ -441,8 +444,7 @@ async def supervisor_tools(state: ReportState, config: RunnableConfig):
     return state_update
 
 def supervisor_should_continue(state: ReportState) -> str:
-    """Decide if we should continue the loop or stop based upon whether the LLM made a tool call"""
-
+    """Decide if we should continue the loop or stop based upon whether the LLM made a tool call."""
     messages = state["messages"]
     last_message = messages[-1]
     # End because the supervisor asked a question or is finished
@@ -454,8 +456,7 @@ def supervisor_should_continue(state: ReportState) -> str:
     return "supervisor_tools"
 
 async def research_agent(state: SectionState, config: RunnableConfig):
-    """LLM decides whether to call a tool or not"""
-    
+    """LLM decides whether to call a tool or not."""
     # Get configuration
     configurable = MultiAgentConfiguration.from_runnable_config(config)
     researcher_model = configurable.researcher_model
@@ -476,12 +477,11 @@ async def research_agent(state: SectionState, config: RunnableConfig):
 
     # **NEW: Truncate messages to prevent context length errors**
     # Use a conservative limit to leave room for tool calls and responses
-    max_tokens = 60000  # Leave 5536 tokens for tools and response
+    max_context_tokens = 60000  # Leave room for tools and response
     messages = await truncate_messages_for_context(
         messages,
-        model=researcher_model,  # Add the missing model parameter
-        max_tokens=max_tokens,
-        preserve_recent=2  # Keep recent research context
+        max_context_tokens=max_context_tokens,
+        model_name=researcher_model
     )
 
     response = await bind_tools_with_model_support(
@@ -506,7 +506,7 @@ async def research_agent(state: SectionState, config: RunnableConfig):
     }
 
 async def research_agent_tools(state: SectionState, config: RunnableConfig):
-    """Performs the tool call and route to supervisor or continue the research loop"""
+    """Perform the tool call and route to supervisor or continue the research loop."""
     configurable = MultiAgentConfiguration.from_runnable_config(config)
 
     result: List[BaseMessage] = []
@@ -563,8 +563,7 @@ async def research_agent_tools(state: SectionState, config: RunnableConfig):
     return state_update
 
 def research_agent_should_continue(state: SectionState) -> str:
-    """Decide if we should continue the loop or stop based upon whether the LLM made a tool call"""
-
+    """Decide if we should continue the loop or stop based upon whether the LLM made a tool call."""
     messages = state["messages"]
     last_message = messages[-1]
 

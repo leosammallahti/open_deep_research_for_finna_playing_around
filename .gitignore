@@ -37,6 +37,12 @@ ENV/
 *.swo
 .DS_Store
 
+# Cursor IDE specific (optional - remove if you want to version control cursor rules)
+# .cursorrules
+# .cursorignore
+# .cursor/
+# .notes/
+
 # Jupyter Notebook
 .ipynb_checkpoints
 
