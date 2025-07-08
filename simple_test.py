@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """Simple test of our refactored MVP using DuckDuckGo search (no API keys needed)."""
-import asyncio
+
 import sys
+if 'pytest' in sys.modules:
+    import pytest  # type: ignore
+    pytest.skip("simple_test is an example script, not a test", allow_module_level=True)
+
+import asyncio
+import sys as _sys
 from pathlib import Path
 
 # Load environment variables if available
