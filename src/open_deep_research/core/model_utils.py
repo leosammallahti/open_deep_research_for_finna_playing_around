@@ -5,7 +5,23 @@ from typing import Any, Dict, Type
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel
-from langsmith import Trace
+try:
+    from langsmith import Trace  # type: ignore
+except ImportError:  # Fallback if older langsmith version
+    class _NoOpTrace:  # noqa: D401 – Simple stub
+        """Fallback Trace callback that does nothing if LangSmith is unavailable."""
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        # The real Trace callback implements LangChain callbacks; we stub no-ops
+        def __getattr__(self, _name):  # noqa: D401 – generic proxy
+            def _noop(*_a, **_kw):
+                return None
+
+            return _noop
+
+    Trace = _NoOpTrace  # type: ignore
 
 
 def initialize_model(

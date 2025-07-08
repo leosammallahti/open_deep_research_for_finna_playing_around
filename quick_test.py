@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """Quick test of the improved MVP with real API keys."""
-import asyncio
+
 import sys
+if 'pytest' in sys.modules:
+    import pytest  # type: ignore
+    pytest.skip("quick_test is an example script, not a test", allow_module_level=True)
+
+import asyncio
+import sys as _sys
 from pathlib import Path
 
 # Load environment variables

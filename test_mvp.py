@@ -3,8 +3,14 @@
 
 This shows how the refactored DeepSeek integration and robust search work.
 """
-import asyncio
+
 import sys
+if 'pytest' in sys.modules:
+    import pytest  # type: ignore
+    pytest.skip("test_mvp is an example script, not a unit test", allow_module_level=True)
+
+import asyncio
+import sys as _sys
 from pathlib import Path
 
 # Add src to path
