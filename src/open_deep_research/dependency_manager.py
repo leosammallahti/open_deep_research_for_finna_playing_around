@@ -3,13 +3,14 @@
 This module handles optional imports and provides clear guidance when dependencies are missing.
 """
 
-import logging
 import os
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Set
 
-logger = logging.getLogger(__name__)
+from open_deep_research.core.logging_utils import get_logger
+
+logger = get_logger(__name__)
 
 
 # Enhanced error classes for better error handling
@@ -94,14 +95,14 @@ class DependencyInfo:
 class DependencyManager:
     """Manages optional dependencies for search providers."""
     
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize DependencyManager and check provider availability."""
         self._available_providers: Set[SearchProvider] = set()
         self._dependency_info: Dict[SearchProvider, DependencyInfo] = {}
         self._imports_cache: Dict[str, Any] = {}
         self._initialize_dependencies()
     
-    def _initialize_dependencies(self):
+    def _initialize_dependencies(self) -> None:
         """Initialize dependency information and check availability."""
         # Define dependency information
         dependencies = {
@@ -184,7 +185,7 @@ class DependencyManager:
             
             self._dependency_info[provider] = dep_info
     
-    def _try_import(self, import_name: str):
+    def _try_import(self, import_name: str) -> Any:
         """Try to import a module and cache the result."""
         if import_name in self._imports_cache:
             return self._imports_cache[import_name]
@@ -315,7 +316,7 @@ class DependencyManager:
         report_lines.append("------------------------------\n")
         return "\n".join(report_lines)
     
-    def get_safe_import(self, import_name: str):
+    def get_safe_import(self, import_name: str) -> Any | None:
         """Safely import a module, returning None if not available."""
         try:
             return self._try_import(import_name)
@@ -343,6 +344,6 @@ def get_status_report() -> str:
     """Generate a status report of all dependencies."""
     return dependency_manager.get_status_report()
 
-def get_safe_import(import_name: str):
+def get_safe_import(import_name: str) -> Any | None:
     """Safely import a module, returning None if not available."""
     return dependency_manager.get_safe_import(import_name) 

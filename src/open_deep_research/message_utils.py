@@ -4,12 +4,13 @@ This module provides a unified interface for working with messages regardless
 of whether they are dictionaries or BaseMessage objects.
 """
 
-import logging
 from typing import Any, Dict, List, Union
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
-logger = logging.getLogger(__name__)
+from open_deep_research.core.logging_utils import get_logger
+
+logger = get_logger(__name__)
 
 
 def get_message_content(message: Union[Dict[str, Any], BaseMessage]) -> str:

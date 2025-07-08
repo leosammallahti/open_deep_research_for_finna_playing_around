@@ -126,9 +126,10 @@ class WorkflowConfiguration(BaseConfiguration):
         cls, config: RunnableConfig | None = None
     ) -> "WorkflowConfiguration":
         """Create a WorkflowConfiguration instance from a RunnableConfig."""
-        configurable = (
-            config["configurable"] if config and "configurable" in config else {}
-        )
+        # Safely extract the configurable mapping – runtime may pass in non-dict objects
+        configurable: dict[str, Any] = {}
+        if config and isinstance(config, dict):
+            configurable = config.get("configurable", {})
         values: dict[str, Any] = {}
         
         for f in fields(cls):

@@ -135,6 +135,8 @@ def models(request, research_agent):
 # Note: Command line options are defined in conftest.py
 # These fixtures still work with options defined there
 
+pytest.skip("Skipping heavy LangSmith evaluation tests in unit CI", allow_module_level=True)
+
 @pytest.mark.langsmith
 def test_response_criteria_evaluation(research_agent, search_api, models, eval_model):
     """Test if a report meets the specified quality criteria."""

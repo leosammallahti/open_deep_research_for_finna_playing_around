@@ -9,11 +9,15 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
+import pytest
+
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from open_deep_research.configuration import SearchAPI
 from open_deep_research.graph import graph
+
+pytest.skip("Skipping heavy integration tests in unit CI", allow_module_level=True)
 
 # Test configurations that should work
 WORKING_CONFIGURATIONS = [

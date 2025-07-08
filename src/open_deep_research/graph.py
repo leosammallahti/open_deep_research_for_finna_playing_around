@@ -3,7 +3,7 @@
 This module defines the workflow nodes and graph for the LangGraph-based research pipeline,
 including report planning, section generation, web search, and content compilation.
 """
-from typing import Literal, TypedDict
+from typing import TypedDict
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -19,6 +19,7 @@ from open_deep_research.core import (
     get_search_api_params,
     initialize_model,
 )
+from open_deep_research.core.logging_utils import get_logger
 from open_deep_research.prompts import (
     final_section_writer_instructions,
     query_writer_instructions,
@@ -35,20 +36,47 @@ from open_deep_research.pydantic_state import (
     SectionOutput,
     Sections,
 )
+from open_deep_research.core.config_utils import get_config_value
 from open_deep_research.utils import (
     filter_think_tokens,
     format_sections_for_context,
     format_sections_for_final_report,
-    get_config_value,
     get_structured_output_with_fallback,
     get_today_str,
     select_and_execute_search,
     summarize_search_results,
 )
-import operator
-from open_deep_research.core.logging_utils import get_logger
 
 logger = get_logger(__name__)
+
+# --- helper utility for guarded state access ---
+from typing import Any, Mapping, TypeVar
+
+T = TypeVar("T")
+
+def get_state_value(state: Mapping[str, Any], key: str, default: T | None = None, *, required: bool = False) -> T | None:
+    """Retrieve a value from the section-state dict with optional fallback and requirement check.
+
+    Args:
+        state: Mapping containing state values.
+        key: Key to look for.
+        default: Value to return if key is missing (and *required* is False).
+        required: If True, raise ValueError when the key is absent or value is None.
+
+    Returns:
+        The requested value or *default*.
+
+    Raises:
+        ValueError: If *required* is True and value is missing.
+    """
+    value = state.get(key, default)
+    if required and value is None:
+        logger.error("Required state key '%s' is missing", key)
+        raise ValueError(f"Required state key '{key}' is missing")
+    if value is default and key not in state:
+        # log once for visibility, but don't flood logs on every access
+        logger.warning("State key '%s' missing; using default", key)
+    return value
 
 
 class SectionResearchState(TypedDict):
@@ -64,7 +92,7 @@ class SectionResearchState(TypedDict):
 
 async def generate_report_plan(state: DeepResearchState, config: RunnableConfig):
     """Generate a report plan with sections and research queries."""
-    configurable = extract_configuration(config, WorkflowConfiguration)
+    configurable = WorkflowConfiguration.from_runnable_config(config)
     topic = state.topic
     feedback = " ".join(state.feedback or [])
     
@@ -86,7 +114,7 @@ async def generate_report_plan(state: DeepResearchState, config: RunnableConfig)
     )
     planner_message = "Generate the sections of the report. Your response must include a 'sections' field containing a list of sections."
     
-    report_sections = await get_structured_output_with_fallback(
+    report_sections: Sections = await get_structured_output_with_fallback(
         planner_llm, 
         Sections, 
         [SystemMessage(content=system_instructions_sections), HumanMessage(content=planner_message)],
@@ -105,16 +133,16 @@ async def human_feedback(state: DeepResearchState):
 async def generate_queries(state: SectionResearchState, config: RunnableConfig):
     """Generate search queries for researching a specific section."""
     configurable = WorkflowConfiguration.from_runnable_config(config)
-    # Use dictionary key access for all state variables
-    topic = state["topic"]
-    section = state["section"]
+    # Guarded state access – fall back gracefully while logging
+    topic = get_state_value(state, "topic", "Unknown Topic")
+    section = get_state_value(state, "section", required=True)
 
     # 1. Get the writer model (or a dedicated query model if specified)
     writer_provider, writer_model_name, writer_model_id = configurable.get_model_for_role("writer")
-    writer_model = init_chat_model(
-        model=writer_model_name, 
-        model_provider=writer_provider, 
-        model_kwargs=configurable.writer_model_kwargs or {}
+    writer_model = initialize_model(
+        writer_provider,
+        writer_model_name,
+        configurable.writer_model_kwargs
     )
 
     # 2. Generate queries
@@ -125,7 +153,7 @@ async def generate_queries(state: SectionResearchState, config: RunnableConfig):
         today=get_today_str()
     )
     
-    queries = await get_structured_output_with_fallback(
+    queries: Queries = await get_structured_output_with_fallback(
         writer_model, 
         Queries, 
         [SystemMessage(content=system_instructions), HumanMessage(content="Generate search queries.")],
@@ -139,7 +167,7 @@ async def generate_queries(state: SectionResearchState, config: RunnableConfig):
 
 async def search_web(state: SectionResearchState, config: RunnableConfig):
     """Perform a web search for the generated queries."""
-    configurable = extract_configuration(config, WorkflowConfiguration)
+    configurable = WorkflowConfiguration.from_runnable_config(config)
     params_to_pass = get_search_api_params(configurable)
     search_api_val = get_config_value(configurable.search_api)
     search_api = str(search_api_val) if search_api_val is not None else "none"
@@ -162,18 +190,24 @@ async def search_web(state: SectionResearchState, config: RunnableConfig):
 async def write_section(state: SectionResearchState, config: RunnableConfig):
     """Write a section of the report based on search results and reflect on it."""
     configurable = WorkflowConfiguration.from_runnable_config(config)
-    # Use dictionary key access for all state variables
-    topic = state["topic"]
-    section = state["section"]
-    source_str = state.get("source_str", "")
-    search_iterations = state.get("search_iterations", 0)
+    # Guarded state access with sensible defaults
+    topic = get_state_value(state, "topic", "Research Topic")
+    section = get_state_value(state, "section")
+    source_str = get_state_value(state, "source_str", "")
+    search_iterations = get_state_value(state, "search_iterations", 0)
+
+    # Ensure section exists
+    if not section:
+        # Should rarely happen but keep behaviour consistent
+        logger.warning("No section found in state, creating default")
+        section = Section(name="Main", description="Main content", research=True)
 
     # 1. Get the writer model
     writer_provider, writer_model_name, writer_model_id = configurable.get_model_for_role("writer")
-    writer_model = init_chat_model(
-        model=writer_model_name,
-        model_provider=writer_provider,
-        model_kwargs=configurable.writer_model_kwargs or {}
+    writer_model = initialize_model(
+        writer_provider,
+        writer_model_name,
+        configurable.writer_model_kwargs or {}
     )
 
     # 2. Truncate source_str if needed for models with limited context
@@ -191,7 +225,7 @@ async def write_section(state: SectionResearchState, config: RunnableConfig):
         section_content=section.content
     )
     
-    section_content_result = await get_structured_output_with_fallback(
+    section_content_result: SectionOutput = await get_structured_output_with_fallback(
         writer_model,
         SectionOutput,
         [SystemMessage(content=writer_system_message), HumanMessage(content=writer_human_message)],
@@ -201,10 +235,10 @@ async def write_section(state: SectionResearchState, config: RunnableConfig):
 
     # 4. Get the reflection model
     reflection_provider, reflection_model_name, reflection_model_id = configurable.get_model_for_role("reflection")
-    reflection_model = init_chat_model(
-        model=reflection_model_name, 
-        model_provider=reflection_provider, 
-        model_kwargs=configurable.planner_model_kwargs or {} # Re-use planner kwargs for reflection
+    reflection_model = initialize_model(
+        reflection_provider,
+        reflection_model_name, 
+        configurable.planner_model_kwargs or {} # Re-use planner kwargs for reflection
     )
 
     # 5. Reflect and grade the section
@@ -216,7 +250,7 @@ async def write_section(state: SectionResearchState, config: RunnableConfig):
     )
     section_grader_message = "Grade the report section and suggest follow-up queries if needed."
     
-    feedback = await get_structured_output_with_fallback(
+    feedback: Feedback = await get_structured_output_with_fallback(
         reflection_model,
         Feedback,
         [SystemMessage(content=section_grader_instructions_formatted), HumanMessage(content=section_grader_message)],
@@ -269,7 +303,7 @@ async def write_final_sections(state: dict, config: RunnableConfig):
     writer_provider = get_config_value(configurable.writer_provider)
     writer_model_name = get_config_value(configurable.writer_model)
     writer_model_kwargs = get_config_value(configurable.writer_model_kwargs or {})
-    writer_model = init_chat_model(model=writer_model_name, model_provider=writer_provider, model_kwargs=writer_model_kwargs) 
+    writer_model = initialize_model(model=writer_model_name, model_provider=writer_provider, model_kwargs=writer_model_kwargs) 
     
     section_content = await writer_model.ainvoke([SystemMessage(content=system_instructions),
                                            HumanMessage(content="Generate a report section based on the provided sources.")])

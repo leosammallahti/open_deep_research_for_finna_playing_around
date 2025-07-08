@@ -7,13 +7,20 @@ import asyncio
 import concurrent.futures
 import datetime
 import hashlib
-import itertools
 import json
 import os
 import random
 import time
 from collections import defaultdict
-from typing import Annotated, Any, Dict, List, Literal, Union, cast, TYPE_CHECKING, Optional
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Literal,
+    Union,
+    cast,
+)
 from urllib.parse import unquote
 
 import aiohttp
@@ -37,144 +44,98 @@ else:
             """Placeholder class when linkup is not available."""
             def __init__(self):
                 raise ImportError("LinkupClient is not available. Please install the linkup package.")
+
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents.aio import SearchClient as AsyncAzureAISearchClient
 from bs4 import BeautifulSoup, Tag
 from duckduckgo_search import DDGS
-from langchain.chat_models import init_chat_model
-from langchain.embeddings import init_embeddings
 from langchain_anthropic import ChatAnthropic
 from langchain_community.retrievers import ArxivRetriever
 from langchain_community.utilities.pubmed import PubMedAPIWrapper
-from langchain_community.utilities.arxiv import ArxivAPIWrapper
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import BaseMessage
 from langchain_core.output_parsers import PydanticOutputParser
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg, tool
+from langchain_core.tools import tool
 from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langsmith import traceable
 from markdownify import markdownify
 from pydantic import BaseModel
-from tavily import AsyncTavilyClient
 
-from open_deep_research.configuration import WorkflowConfiguration
+from open_deep_research.core.logging_utils import get_logger
 from open_deep_research.message_utils import (
     count_message_tokens,
     truncate_message_content,
 )
 from open_deep_research.prompts import SUMMARIZATION_PROMPT
 from open_deep_research.pydantic_state import Section
-from open_deep_research.core.logging_utils import get_logger
+from open_deep_research.tavily_tools import (
+    acquire_tavily_semaphore,
+    tavily_extract_tool,
+)
 
 logger = get_logger(__name__)
 
+# --- safe_get helper (added) ---
 
-def get_config_value(value):
-    """Handle string, dict, and enum cases of configuration values."""
-    if isinstance(value, str):
-        return value
-    elif isinstance(value, dict):
-        return value
-    else:
-        return value.value
-
-def get_search_params(search_api: str, search_api_config: Dict[str, Any] | None) -> Dict[str, Any]:
-    """Filter the search_api_config dictionary to include only parameters accepted by the specified search API.
-
-    Args:
-        search_api (str): The search API identifier (e.g., "exa", "tavily").
-        search_api_config (Optional[Dict[str, Any]]): The configuration dictionary for the search API.
-
-    Returns:
-        Dict[str, Any]: A dictionary of parameters to pass to the search function.
-    """
-    # Define accepted parameters for each search API
-    SEARCH_API_PARAMS = {
-        "exa": ["max_characters", "num_results", "include_domains", "exclude_domains", "subpages"],
-        "tavily": ["max_results", "topic"],
-        "perplexity": [],  # Perplexity accepts no additional parameters
-        "arxiv": ["load_max_docs", "get_full_documents", "load_all_available_meta"],
-        "pubmed": ["top_k_results", "email", "api_key", "doc_content_chars_max"],
-        "linkup": ["depth"],
-        "googlesearch": ["max_results"],
-    }
-
-    # Get the list of accepted parameters for the given search API
-    accepted_params = SEARCH_API_PARAMS.get(search_api, [])
-
-    # If no config provided, return an empty dict
-    if not search_api_config:
-        return {}
-
-    # Filter the config to only include accepted parameters
-    return {k: v for k, v in search_api_config.items() if k in accepted_params}
+def safe_get(obj: Any, key: str, default: Any | None = None) -> Any:
+    """Safe getter that works with both dicts and objects."""
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    elif hasattr(obj, key):
+        return getattr(obj, key, default)
+    return default
 
 def deduplicate_and_format_sources(
     search_response,
-    max_tokens_per_source=5000,
-    include_raw_content=True,
+    max_tokens_per_source: int = 5000,
+    include_raw_content: bool = True,
     deduplication_strategy: Literal["keep_first", "keep_last"] = "keep_first"
-):
-    """Format a list of search responses into a readable string.
-    
-    Limits the raw_content to approximately max_tokens_per_source tokens.
- 
-    Args:
-        search_responses: List of search response dicts, each containing:
-            - query: str
-            - results: List of dicts with fields:
-                - title: str
-                - url: str
-                - content: str
-                - score: float
-                - raw_content: str|None
-        max_tokens_per_source: int
-        include_raw_content: bool
-        deduplication_strategy: Whether to keep the first or last search result for each unique URL
-    Returns:
-        str: Formatted string with deduplicated sources
-    """
-     # Collect all results
-    sources_list = []
-    for response in search_response:
-        sources_list.extend(response['results'])
+) -> str:
+    """Format a list of search responses into a readable string with basic de-duplication and robust null handling."""
+    formatted_output = ""
+    unique_results: dict[str, Dict[str, Any]] = {}
 
-    # Deduplicate by URL
-    if deduplication_strategy == "keep_first":
-        unique_sources = {}
-        for source in sources_list:
-            if source['url'] not in unique_sources:
-                unique_sources[source['url']] = source
-    elif deduplication_strategy == "keep_last":
-        unique_sources = {source['url']: source for source in sources_list}
-    else:
-        raise ValueError(f"Invalid deduplication strategy: {deduplication_strategy}")
+    # Early exit on empty input
+    if not search_response:
+        return "No search results found."
 
-    # Format output
-    formatted_text = "Content from sources:\n"
-    for i, source in enumerate(unique_sources.values(), 1):
-        formatted_text += f"{'='*80}\n"  # Clear section separator
-        formatted_text += f"Source: {source['title']}\n"
-        formatted_text += f"{'-'*80}\n"  # Subsection separator
-        formatted_text += f"URL: {source['url']}\n===\n"
-        formatted_text += f"Most relevant content from source: {source['content']}\n===\n"
+    # Normalise to list
+    sources_list = search_response if isinstance(search_response, list) else [search_response]
+
+    for response in sources_list:
+        if not isinstance(response, dict):
+            continue
+        results = response.get("results", [])
+        if not isinstance(results, list):
+            continue
+
+        for result in results:
+            if not isinstance(result, dict):
+                continue
+            url = result.get("url")
+            if not url:
+                continue
+
+            if deduplication_strategy == "keep_first" and url in unique_results:
+                continue  # skip duplicates when keeping first
+
+            unique_results[url] = result  # keep last by default or overwrite
+
+    # Build output roughly following the original style
+    for i, (url, result) in enumerate(unique_results.items()):
+        formatted_output += f"\n\nSource: {result.get('title', 'Untitled')}\n"
+        formatted_output += f"URL: {url}\n===\n"
+        formatted_output += f"Most relevant content from source: {result.get('content', '')}\n===\n"
+
         if include_raw_content:
-            # Using rough estimate of 4 characters per token
-            char_limit = max_tokens_per_source * 4
-            # Handle None raw_content
-            raw_content = source.get('raw_content', '')
-            if raw_content is None:
-                raw_content = ''
-            if len(raw_content) > char_limit:
-                raw_content = raw_content[:char_limit] + "... [truncated]"
-            formatted_text += f"Full source content limited to {max_tokens_per_source} tokens: {raw_content}\n\n"
-        formatted_text += f"{'='*80}\n\n" # End section separator
-                
-    return formatted_text.strip()
+            raw_content = result.get("raw_content", "")
+            if raw_content:
+                formatted_output += f"Full content:\n{raw_content[:max_tokens_per_source]}\n"
+
+    return formatted_output or "No valid search results found."
 
 def format_sections(sections: list[Section]) -> str:
     """Format a list of sections into a string."""
@@ -194,51 +155,6 @@ Content:
 
 """
     return formatted_str
-
-@traceable
-async def tavily_search_async(search_queries, max_results: int = 5, topic: Literal["general", "news", "finance"] = "general", include_raw_content: bool = True):
-    """Perform concurrent web searches with the Tavily API.
-
-    Args:
-        search_queries (List[str]): List of search queries to process
-        max_results (int): Maximum number of results to return
-        topic (Literal["general", "news", "finance"]): Topic to filter results by
-        include_raw_content (bool): Whether to include raw content in the results
-
-    Returns:
-            List[dict]: List of search responses from Tavily API:
-                {
-                    'query': str,
-                    'follow_up_questions': None,      
-                    'answer': None,
-                    'images': list,
-                    'results': [                     # List of search results
-                        {
-                            'title': str,            # Title of the webpage
-                            'url': str,              # URL of the result
-                            'content': str,          # Summary/snippet of content
-                            'score': float,          # Relevance score
-                            'raw_content': str|None  # Full page content if available
-                        },
-                        ...
-                    ]
-                }
-    """
-    tavily_async_client = AsyncTavilyClient()
-    search_tasks = []
-    for query in search_queries:
-            search_tasks.append(
-                tavily_async_client.search(
-                    query,
-                    max_results=max_results,
-                    include_raw_content=include_raw_content,
-                    topic=topic
-                )
-            )
-
-    # Execute all searches concurrently
-    search_docs = await asyncio.gather(*search_tasks)
-    return search_docs
 
 @traceable
 async def azureaisearch_search_async(search_queries: list[str], max_results: int = 5, topic: str = "general", include_raw_content: bool = True) -> list[dict]:
@@ -309,7 +225,7 @@ async def azureaisearch_search_async(search_queries: list[str], max_results: int
 
 
 @traceable
-async def perplexity_search_async(search_queries: List[str]):
+async def perplexity_search_async(search_queries: List[str]) -> List[Dict[str, Any]]:
     """Perform concurrent web searches using the Perplexity API asynchronously.
 
     Args:
@@ -376,10 +292,14 @@ async def perplexity_search_async(search_queries: List[str]):
     return results
 
 @traceable
-async def exa_search(search_queries, max_characters: int | None = None, num_results=5, 
-                     include_domains: List[str] | None = None, 
-                     exclude_domains: List[str] | None = None,
-                     subpages: int | None = None):
+async def exa_search(
+    search_queries: List[str], 
+    max_characters: int | None = None, 
+    num_results: int = 5, 
+    include_domains: List[str] | None = None, 
+    exclude_domains: List[str] | None = None,
+    subpages: int | None = None
+) -> List[Dict[str, Any]]:
     """Search the web using the Exa API.
     
     Args:
@@ -577,7 +497,12 @@ async def exa_search(search_queries, max_characters: int | None = None, num_resu
     return search_docs
 
 @traceable
-async def arxiv_search_async(search_queries, load_max_docs=5, get_full_documents=True, load_all_available_meta=True):
+async def arxiv_search_async(
+    search_queries: List[str], 
+    load_max_docs: int = 5, 
+    get_full_documents: bool = True, 
+    load_all_available_meta: bool = True
+) -> List[Dict[str, Any]]:
     """Perform concurrent searches on arXiv using the ArxivRetriever.
 
     Args:
@@ -735,7 +660,13 @@ async def arxiv_search_async(search_queries, load_max_docs=5, get_full_documents
     return search_docs
 
 @traceable
-async def pubmed_search_async(search_queries, top_k_results=5, email=None, api_key=None, doc_content_chars_max=4000):
+async def pubmed_search_async(
+    search_queries: List[str], 
+    top_k_results: int = 5, 
+    email: str | None = None, 
+    api_key: str | None = None, 
+    doc_content_chars_max: int = 4000
+) -> List[Dict[str, Any]]:
     """Perform concurrent searches on PubMed using the PubMedAPIWrapper.
 
     Args:
@@ -878,37 +809,38 @@ async def pubmed_search_async(search_queries, top_k_results=5, email=None, api_k
     return search_docs
 
 @traceable
-async def linkup_search(search_queries: List[str], depth: str | None = "standard"):
-    """Perform concurrent web searches using the Linkup API.
-
+async def linkup_search(search_queries: List[str], depth: str | None = "standard") -> List[Dict[str, Any]]:
+    """Perform concurrent web searches using Linkup API.
+    
     Args:
         search_queries (List[str]): List of search queries to process
-        depth (str, optional): "standard" (default)  or "deep". More details here https://docs.linkup.so/pages/documentation/get-started/concepts
-
-    Returns:
-        List[dict]: List of search responses from Linkup API, one per query. Each response has format:
-            {
-                'results': [            # List of search results
-                    {
-                        'title': str,   # Title of the search result
-                        'url': str,     # URL of the result
-                        'content': str, # Summary/snippet of content
-                    },
-                    ...
-                ]
-            }
-    """
-    if not LINKUP_AVAILABLE:
-        raise ImportError("LinkupClient is not available. Please install the linkup package to use this search API.")
+        depth (str): Search depth, either "standard" or "deep"
     
-    # LinkupClient is now properly typed and will raise an error if not available
+    Returns:
+        List[dict]: List of search responses from Linkup, one per query
+    """
+    # Validate depth parameter and cast to Literal type
+    if depth not in ["standard", "deep"]:
+        depth = "standard"
+    depth_literal: Literal["standard", "deep"] = depth  # type: ignore
+    
+    # Import and check for Linkup client
+    try:
+        from linkup import LinkupClient
+    except ImportError:
+        logger.warning("Linkup client not available. Install with: pip install linkup")
+        return []
+    
+    # Initialize client
     client = LinkupClient()
+    
+    # Create search tasks
     search_tasks = []
     for query in search_queries:
         search_tasks.append(
                 client.async_search(
                     query,
-                    depth,
+                    depth_literal,  # Now correctly typed as Literal['standard', 'deep']
                     output_type="searchResults",
                 )
             )
@@ -927,7 +859,7 @@ async def linkup_search(search_queries: List[str], depth: str | None = "standard
     return search_results
 
 @traceable
-async def google_search_async(search_queries: Union[str, List[str]], max_results: int = 5, include_raw_content: bool = True):
+async def google_search_async(search_queries: Union[str, List[str]], max_results: int = 5, include_raw_content: bool = True) -> List[Dict[str, Any]]:
     """Perform concurrent web searches using Google.
     
     Uses Google Custom Search API if environment variables are set, otherwise falls back to web scraping.
@@ -1348,160 +1280,6 @@ async def duckduckgo_search(search_queries: List[str]):
     else:
         return "No valid search results found. Please try different search queries or use a different search API."
 
-TAVILY_SEARCH_DESCRIPTION = (
-    "A search engine optimized for comprehensive, accurate, and trusted results. "
-    "Useful for when you need to answer questions about current events."
-)
-
-@tool(description=TAVILY_SEARCH_DESCRIPTION)
-async def tavily_search(
-    queries: List[str],
-    max_results: Annotated[int, InjectedToolArg] = 5,
-    topic: Annotated[Literal["general", "news", "finance"], InjectedToolArg] = "general",
-    include_raw_content: bool = False,
-    config: Optional[RunnableConfig] = None
-) -> str:
-    """Fetch results from Tavily search API.
-
-    Args:
-        queries (List[str]): List of search queries
-        max_results (int): Maximum number of results to return
-        topic (Literal['general', 'news', 'finance']): Topic to filter results by
-        include_raw_content (bool): Whether to include raw content in the results
-
-    Returns:
-        str: A formatted string of search results
-    """
-    # Use tavily_search_async with include_raw_content parameter
-    search_results = await tavily_search_async(
-        queries,
-        max_results=max_results,
-        topic=topic,
-        include_raw_content=include_raw_content
-    )
-
-    # Format the search results directly using the raw_content already provided
-    formatted_output = "Search results: \n\n"
-    
-    # Deduplicate results by URL
-    unique_results = {}
-    for response in search_results:
-        for result in response['results']:
-            url = result['url']
-            if url not in unique_results:
-                unique_results[url] = {**result, "query": response['query']}
-
-    async def noop():
-        return None
-
-    configurable = WorkflowConfiguration.from_runnable_config(config)
-    max_char_to_include = 30_000
-    # TODO: share this behavior across all search implementations / tools
-    if configurable.process_search_results == "summarize":
-        if configurable.summarization_model_provider == "anthropic":
-            extra_kwargs = {"betas": ["extended-cache-ttl-2025-04-11"]}
-        else:
-            extra_kwargs = {}
-
-        # Build init_chat_model parameters carefully
-        init_params: Dict[str, Any] = {
-            "model": configurable.summarization_model,
-            "model_provider": configurable.summarization_model_provider,
-            "max_retries": configurable.max_structured_output_retries,
-        }
-        # Add extra_kwargs only if they're compatible
-        if extra_kwargs and isinstance(extra_kwargs, dict):
-            # Only add known compatible parameters
-            for key, value in extra_kwargs.items():
-                if key in ["betas"] and isinstance(value, list):
-                    init_params[key] = value
-        
-        summarization_model = init_chat_model(**init_params)
-        summarization_tasks = [
-            noop() if not result.get("raw_content") else summarize_webpage(summarization_model, result['raw_content'][:max_char_to_include])
-            for result in unique_results.values()
-        ]
-        summaries = await asyncio.gather(*summarization_tasks)
-        unique_results = {
-            url: {'title': result['title'], 'content': result['content'] if summary is None else summary}
-            for url, result, summary in zip(unique_results.keys(), unique_results.values(), summaries)
-        }
-    elif configurable.process_search_results == "split_and_rerank":
-        embeddings = init_embeddings("openai:text-embedding-3-small")
-        results_by_query = itertools.groupby(unique_results.values(), key=lambda x: x['query'])
-        all_retrieved_docs = []
-        for query, query_results in results_by_query:
-            # Convert iterator to list and ensure we have proper Embeddings type
-            query_results_list = list(query_results)
-            # Type check for embeddings
-            if isinstance(embeddings, Embeddings):
-                retrieved_docs = split_and_rerank_search_results(embeddings, query, query_results_list)
-                all_retrieved_docs.extend(retrieved_docs)
-
-        stitched_docs = stitch_documents_by_url(all_retrieved_docs)
-        unique_results = {
-            doc.metadata['url']: {'title': doc.metadata['title'], 'content': doc.page_content}
-            for doc in stitched_docs
-        }
-
-    # Format the unique results
-    for i, (url, result) in enumerate(unique_results.items()):
-        formatted_output += f"\n\n--- SOURCE {i+1}: {result['title']} ---\n"
-        formatted_output += f"URL: {url}\n\n"
-        formatted_output += f"SUMMARY:\n{result['content']}\n\n"
-        if result.get('raw_content'):
-            formatted_output += f"FULL CONTENT:\n{result['raw_content'][:max_char_to_include]}"  # Limit content size
-        formatted_output += "\n\n" + "-" * 80 + "\n"
-    
-    if unique_results:
-        return formatted_output
-    else:
-        return "No valid search results found. Please try different search queries or use a different search API."
-
-
-@tool
-async def azureaisearch_search(queries: List[str], max_results: int = 5, topic: str = "general") -> str:
-    """Fetch results from Azure AI Search API.
-
-    Args:
-        queries (List[str]): List of search queries
-
-    Returns:
-        str: A formatted string of search results
-    """
-    # Use azureaisearch_search_async with include_raw_content=True to get content directly
-    search_results = await azureaisearch_search_async(
-        queries,
-        max_results=max_results,
-        topic=topic,
-        include_raw_content=True
-    )
-
-    # Format the search results directly using the raw_content already provided
-    formatted_output = "Search results: \n\n"
-    
-    # Deduplicate results by URL
-    unique_results = {}
-    for response in search_results:
-        for result in response['results']:
-            url = result['url']
-            if url not in unique_results:
-                unique_results[url] = result
-    
-    # Format the unique results
-    for i, (url, result) in enumerate(unique_results.items()):
-        formatted_output += f"\n\n--- SOURCE {i+1}: {result['title']} ---\n"
-        formatted_output += f"URL: {url}\n\n"
-        formatted_output += f"SUMMARY:\n{result['content']}\n\n"
-        if result.get('raw_content'):
-            formatted_output += f"FULL CONTENT:\n{result['raw_content'][:30000]}"  # Limit content size
-        formatted_output += "\n\n" + "-" * 80 + "\n"
-    
-    if unique_results:
-        return formatted_output
-    else:
-        return "No valid search results found. Please try different search queries or use a different search API."
-
 
 async def select_and_execute_search(search_api: str, query_list: list[str], params_to_pass: dict) -> str:
     """Select and execute the appropriate search function based on the search_api string.
@@ -1520,7 +1298,19 @@ async def select_and_execute_search(search_api: str, query_list: list[str], para
     
     # Web search
     if search_api == "tavily":
-        search_results = await tavily_search_async(query_list, **params_to_pass)
+        from open_deep_research.tavily_tools import (
+            acquire_tavily_semaphore,
+            tavily_search_tool,
+        )
+
+        async def _run_search(q: str):
+            async with acquire_tavily_semaphore():
+                invoke_args = {k: v for k, v in params_to_pass.items() if v is not None}
+                invoke_args["query"] = q
+                return await tavily_search_tool.ainvoke(invoke_args)
+
+        search_results = await asyncio.gather(*[_run_search(q) for q in query_list])
+        search_results = await _supplement_with_extract(search_results)
     elif search_api == "perplexity":
         search_results = await perplexity_search_async(query_list)
     elif search_api == "exa":
@@ -1702,7 +1492,7 @@ def is_api_key_available(provider: str) -> bool:
     return api_key is not None and api_key.strip() != ""
 
 
-def _create_fallback_instance(schema_class):
+def _create_fallback_instance(schema_class: type[BaseModel]) -> BaseModel:
     """Create a fallback instance of a schema class with appropriate defaults.
     
     Args:
@@ -1712,7 +1502,7 @@ def _create_fallback_instance(schema_class):
         A valid instance of the schema class with sensible defaults
     """
     # Import here to avoid circular imports
-    from .pydantic_state import SectionOutput, Sections, Feedback, Queries
+    from .pydantic_state import SectionOutput, Sections
     
     # Handle specific schema classes with appropriate defaults
     if schema_class == SectionOutput:
@@ -1765,7 +1555,12 @@ def _create_fallback_instance(schema_class):
                 return schema_class.__new__(schema_class)
 
 
-async def get_structured_output_with_fallback(model, schema_class, messages, model_id=None):
+async def get_structured_output_with_fallback(
+    model: BaseChatModel, 
+    schema_class: type[BaseModel], 
+    messages: List[BaseMessage], 
+    model_id: str | None = None
+) -> BaseModel:
     """Get structured output from a model with fallback handling.
     
     Args:
@@ -1812,7 +1607,7 @@ async def get_structured_output_with_fallback(model, schema_class, messages, mod
             return _create_fallback_instance(schema_class)
 
 
-def filter_think_tokens(text):
+def filter_think_tokens(text: str) -> str:
     """Remove <think>...</think> tokens from text.
     
     Args:
@@ -1824,13 +1619,15 @@ def filter_think_tokens(text):
     if not isinstance(text, str):
         return text
     
-    # Remove <think>...</think> blocks
+    # Remove <think>...</think> blocks (handle nested tags by looping)
     import re
     pattern = r'<think>.*?</think>'
-    return re.sub(pattern, '', text, flags=re.DOTALL).strip()
+    while re.search(pattern, text, flags=re.DOTALL):
+        text = re.sub(pattern, '', text, flags=re.DOTALL)
+    return text.strip()
 
 
-def format_sections_for_final_report(sections):
+def format_sections_for_final_report(sections: List[Section]) -> str:
     """Format sections for the final report."""
     formatted_text = ""
     for section in sections:
@@ -1842,7 +1639,7 @@ def format_sections_for_final_report(sections):
     return formatted_text
 
 
-def format_sections_for_context(sections):
+def format_sections_for_context(sections: List[Section]) -> str:
     """Format sections to provide context for other operations."""
     formatted_text = "Current sections:\n"
     for i, section in enumerate(sections, 1):
@@ -1852,7 +1649,7 @@ def format_sections_for_context(sections):
     return formatted_text
 
 
-async def summarize_search_results(source_str: str, max_tokens: int = 6000, model: Optional[str] = None) -> str:
+async def summarize_search_results(source_str: str, max_tokens: int = 6000, model: str | None = None) -> str:
     """Summarize search results to fit within token limits.
     
     Args:
@@ -1931,3 +1728,42 @@ async def truncate_messages_for_context(messages: List[Union[Dict[str, Any], Bas
             break
     
     return truncated_messages
+
+# ---------------------------------------------------------------------------
+# Tavily Extract helper
+# ---------------------------------------------------------------------------
+
+
+async def _supplement_with_extract(search_results: list[dict], top_k: int = 20) -> list[dict]:
+    """Fetch raw page content for Tavily search results via the Extract API.
+
+    Args:
+        search_results: List of Tavily search-response dictionaries (one per query).
+        top_k: Upper-bound on number of URLs to extract (credits). Defaults to 20.
+
+    Returns:
+        Same structure but each result has `raw_content` filled (if extraction succeeded).
+    """
+    # Flatten results to unique URLs first (preserve reference)
+    url_to_result: dict[str, dict] = {}
+    for response in search_results:
+        for item in response.get("results", []):
+            url_to_result.setdefault(item["url"], item)
+            if len(url_to_result) >= top_k:
+                break
+        if len(url_to_result) >= top_k:
+            break
+
+    if not url_to_result:
+        return search_results
+
+    urls = list(url_to_result.keys())
+
+    async with acquire_tavily_semaphore():
+        extract_resp = await tavily_extract_tool.ainvoke({"urls": urls, "extract_depth": "advanced"})
+
+    for result in extract_resp.get("results", []):
+        if (url := result.get("url")) and url in url_to_result:
+            url_to_result[url]["raw_content"] = result.get("raw_content")
+
+    return search_results

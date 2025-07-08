@@ -35,9 +35,9 @@ from open_deep_research.state import (
     Queries,
     Sections,
 )
+from open_deep_research.core.config_utils import get_config_value
 from open_deep_research.utils import (
     format_sections,
-    get_config_value,
     get_today_str,
     select_and_execute_search,
 )
@@ -54,7 +54,7 @@ from open_deep_research.workflow.prompts import (
 
 
 ## Nodes
-def initial_router(state: DeepResearchState, config: RunnableConfig):
+def initial_router(state: DeepResearchState, config: RunnableConfig) -> str:
     """Route to the appropriate starting node based on configuration.
     
     Args:
@@ -71,7 +71,7 @@ def initial_router(state: DeepResearchState, config: RunnableConfig):
         return "generate_report_plan"
 
 
-async def clarify_with_user(state: DeepResearchState, config: RunnableConfig):
+async def clarify_with_user(state: DeepResearchState, config: RunnableConfig) -> dict[str, list | bool]:
     """Ask the user for clarification on the research topic.
     
     Args:
@@ -89,7 +89,7 @@ async def clarify_with_user(state: DeepResearchState, config: RunnableConfig):
     writer_model = init_chat_model(model=writer_model_name, model_provider=writer_provider, model_kwargs=writer_model_kwargs) 
     structured_llm = writer_model.with_structured_output(ClarifyWithUser)
     system_instructions = clarify_with_user_instructions.format(messages=get_buffer_string(messages))
-    results = await structured_llm.ainvoke([SystemMessage(content=system_instructions),
+    results: ClarifyWithUser = await structured_llm.ainvoke([SystemMessage(content=system_instructions),
                                      HumanMessage(content="Generate search queries that will help with planning the sections of the report.")])
     return {"messages": messages + [AIMessage(content=results.question)], "already_clarified_topic": True}
 
@@ -130,7 +130,7 @@ async def generate_report_plan(state: DeepResearchState, config: RunnableConfig)
         number_of_queries=number_of_queries,
         today=get_today_str()
     )
-    results = await structured_llm.ainvoke([SystemMessage(content=system_instructions_query),
+    results: Queries = await structured_llm.ainvoke([SystemMessage(content=system_instructions_query),
                                      HumanMessage(content="Generate search queries that will help with planning the sections of the report.")])
     
     query_list = [query.search_query for query in results.queries]
@@ -148,7 +148,7 @@ async def generate_report_plan(state: DeepResearchState, config: RunnableConfig)
     structured_llm = get_model_with_thinking_budget(
         planner_provider, planner_model
     ).with_structured_output(Sections)
-    report_sections = await structured_llm.ainvoke([SystemMessage(content=system_instructions_sections),
+    report_sections: Sections = await structured_llm.ainvoke([SystemMessage(content=system_instructions_sections),
                                              HumanMessage(content=planner_message)])
     sections = report_sections.sections
 
@@ -197,7 +197,7 @@ async def human_feedback(state: DeepResearchState, config: RunnableConfig) -> Co
         raise TypeError(f"Interrupt value of type {type(feedback)} is not supported.")
 
 
-async def generate_queries(state: DeepResearchState, config: RunnableConfig):
+async def generate_queries(state: DeepResearchState, config: RunnableConfig) -> dict[str, list]:
     """Generate search queries for a specific report section.
     
     Args:
@@ -225,12 +225,12 @@ async def generate_queries(state: DeepResearchState, config: RunnableConfig):
                                                            number_of_queries=number_of_queries,
                                                            today=get_today_str())
 
-    queries = await structured_llm.ainvoke([SystemMessage(content=system_instructions),
+    queries: Queries = await structured_llm.ainvoke([SystemMessage(content=system_instructions),
                                      HumanMessage(content="Generate search queries on the provided topic.")])
     return {"search_queries": queries.queries}
 
 
-async def search_web(state: DeepResearchState, config: RunnableConfig):
+async def search_web(state: DeepResearchState, config: RunnableConfig) -> dict[str, str | int]:
     """Execute web search using generated queries and return results.
     
     Args:
@@ -244,14 +244,14 @@ async def search_web(state: DeepResearchState, config: RunnableConfig):
     configurable = extract_configuration(config, WorkflowConfiguration)
     params_to_pass = get_search_api_params(configurable)
 
-    query_list = [query.search_query for query in search_queries]
+    query_list = [query.search_query for query in search_queries if query.search_query]
     search_api = get_config_value(configurable.search_api)
     source_str = await select_and_execute_search(search_api, query_list, params_to_pass)
 
     return {"source_str": source_str, "search_iterations": state.search_iterations + 1}
 
 
-async def write_section(state: DeepResearchState, config: RunnableConfig):
+async def write_section(state: DeepResearchState, config: RunnableConfig) -> Command:
     """Write a report section based on search results and grade the output.
     
     Args:
@@ -278,7 +278,7 @@ async def write_section(state: DeepResearchState, config: RunnableConfig):
         max_retries=configurable.max_structured_output_retries
     )
 
-    section_content = await writer_model.ainvoke([SystemMessage(content=section_writer_instructions),
+    section_content: SectionOutput = await writer_model.ainvoke([SystemMessage(content=section_writer_instructions),
                                            HumanMessage(content=section_writer_inputs_formatted)])
     
     # Create a new section object with the updated content to maintain immutability
@@ -301,7 +301,7 @@ async def write_section(state: DeepResearchState, config: RunnableConfig):
         planner_provider, planner_model
     ).with_structured_output(Feedback)
 
-    feedback = await reflection_model.ainvoke([SystemMessage(content=section_grader_instructions_formatted),
+    feedback: Feedback = await reflection_model.ainvoke([SystemMessage(content=section_grader_instructions_formatted),
                                         HumanMessage(content=section_grader_message)])
 
     if feedback.grade == "pass" or state.search_iterations >= configurable.max_search_depth:
@@ -316,7 +316,7 @@ async def write_section(state: DeepResearchState, config: RunnableConfig):
         )
 
 
-async def write_final_sections(state: DeepResearchState, config: RunnableConfig):
+async def write_final_sections(state: DeepResearchState, config: RunnableConfig) -> dict[str, list]:
     """Write final sections of the report without additional research.
     
     Args:
@@ -346,7 +346,7 @@ async def write_final_sections(state: DeepResearchState, config: RunnableConfig)
     return {"completed_sections": [updated_section]}
 
 
-async def gather_completed_sections(state: DeepResearchState):
+async def gather_completed_sections(state: DeepResearchState) -> dict[str, str]:
     """Gather all completed sections and format them for the final report.
     
     Args:
@@ -361,7 +361,7 @@ async def gather_completed_sections(state: DeepResearchState):
     return {"report_sections_from_research": completed_report_sections}
 
 
-async def compile_final_report(state: DeepResearchState, config: RunnableConfig):
+async def compile_final_report(state: DeepResearchState, config: RunnableConfig) -> dict[str, str]:
     """Compile the final report from all completed sections.
     
     Args:
@@ -429,7 +429,7 @@ async def compile_final_report(state: DeepResearchState, config: RunnableConfig)
         }
 
 
-async def gather_all_sections(state: DeepResearchState):
+async def gather_all_sections(state: DeepResearchState) -> dict:
     """Wait for all parallel write_final_sections to complete.
     
     This node serves as a proper fan-in point for the parallel final section writing,
@@ -439,7 +439,7 @@ async def gather_all_sections(state: DeepResearchState):
     return {}
 
 
-async def initiate_final_section_writing(state: DeepResearchState):
+async def initiate_final_section_writing(state: DeepResearchState) -> list:
     """Initiate the writing of final sections that don't need research.
     
     Args:

@@ -1,27 +1,28 @@
 """Model utilities for common initialization patterns."""
 
 from typing import Any, Dict, Type
-
+from langchain_core.runnables import Runnable
 from langchain.chat_models import init_chat_model
 from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel
+
 try:
-    from langsmith import Trace  # type: ignore
+    from langsmith import Trace
 except ImportError:  # Fallback if older langsmith version
     class _NoOpTrace:  # noqa: D401 – Simple stub
         """Fallback Trace callback that does nothing if LangSmith is unavailable."""
 
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             pass
 
         # The real Trace callback implements LangChain callbacks; we stub no-ops
-        def __getattr__(self, _name):  # noqa: D401 – generic proxy
-            def _noop(*_a, **_kw):
+        def __getattr__(self, _name: str) -> Any:  # noqa: D401 – generic proxy
+            def _noop(*_a: Any, **_kw: Any) -> None:
                 return None
 
             return _noop
 
-    Trace = _NoOpTrace  # type: ignore
+    Trace = _NoOpTrace
 
 
 def initialize_model(
@@ -44,18 +45,12 @@ def initialize_model(
     Returns:
         Initialized chat model
     """
-    kwargs = {
-        "model": model_name,
-        "model_provider": provider,
-    }
-    
-    if model_kwargs:
-        kwargs["model_kwargs"] = model_kwargs
-        
-    if max_retries is not None:
-        kwargs["max_retries"] = max_retries
-        
-    return init_chat_model(**kwargs)
+    return init_chat_model(
+        model=model_name,
+        model_provider=provider,
+        model_kwargs=model_kwargs,
+        max_retries=max_retries
+    )
 
 
 def initialize_model_with_structured_output(
@@ -64,7 +59,7 @@ def initialize_model_with_structured_output(
     output_schema: Type[BaseModel],
     model_kwargs: Dict[str, Any] | None = None,
     max_retries: int | None = None,
-) -> BaseChatModel:
+) -> Runnable:
     """Initialize a model and bind it to a structured output schema.
     
     Combines model initialization with structured output binding,
@@ -112,23 +107,27 @@ def get_model_with_thinking_budget(
     thinking_models = ["claude-3-7-sonnet-latest"]
     
     if model_name in thinking_models:
-        kwargs = {
-            "model": model_name,
-            "model_provider": provider,
-            "max_tokens": max_tokens,
-            "thinking": {"type": "enabled", "budget_tokens": thinking_budget}
+        # Build kwargs for thinking model
+        thinking_kwargs = {
+            "type": "enabled", 
+            "budget_tokens": thinking_budget
         }
-        if model_kwargs:
-            kwargs["model_kwargs"] = model_kwargs
-        if max_retries is not None:
-            kwargs["max_retries"] = max_retries
-        return init_chat_model(**kwargs)
+        
+        # Initialize with thinking support
+        return init_chat_model(
+            model=model_name,
+            model_provider=provider,
+            max_tokens=max_tokens,
+            thinking=thinking_kwargs,
+            model_kwargs=model_kwargs,
+            max_retries=max_retries
+        )
     else:
         # Regular initialization for models without thinking support
-        return initialize_model(provider, model_name, model_kwargs, max_retries) 
+        return initialize_model(provider, model_name, model_kwargs, max_retries)
 
 
-def trace_config(session: str = "dev") -> dict:
+def trace_config(session: str = "dev") -> Dict[str, Any]:
     """Return a LangSmith trace configuration dictionary.
 
     Usage:

@@ -37,10 +37,12 @@ dependencies = [
     "rich>=13.0.0",
     "langgraph-cli[inmem]>=0.3.1",
     "langsmith>=0.3.37",
+    "structlog>=24.1.0",
+    "pydantic-settings>=2.2.1",
 ]
 
 [project.optional-dependencies]
-dev = ["mypy>=1.11.1", "ruff>=0.6.1"]
+dev = ["mypy>=1.11.1", "ruff>=0.6.1", "pytest-cov>=5.0.0", "pytest-asyncio>=0.23.6"]
 
 [build-system]
 requires = ["setuptools>=73.0.0", "wheel"]

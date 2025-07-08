@@ -8,6 +8,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
+from open_deep_research.tavily_tools import tavily_search_tool
+
 from .dependency_manager import SearchProvider, validate_provider_or_raise
 
 
@@ -84,18 +86,18 @@ class TavilySearchProvider(SearchProviderBase):
     
     async def search(self, queries: List[str], **kwargs) -> List[SearchResult]:
         """Execute Tavily search."""
-        from open_deep_research.utils import tavily_search_async
-        
         params = self.validate_params(**kwargs)
         results = []
         
         # Execute search
-        search_responses = await tavily_search_async(
-            queries,
-            max_results=params['max_results'],
-            topic=params['topic'],
-            include_raw_content=params['include_raw_content']
-        )
+        # Using the official TavilySearch tool
+        response = await tavily_search_tool.ainvoke({
+            "query": "What is the capital of Finland?",
+            "max_results": 5,
+            "search_depth": "advanced",
+            "include_raw_content": True,
+        })
+        search_responses = [response]
         
         # Convert to standardized format
         for response in search_responses:
