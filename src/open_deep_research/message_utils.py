@@ -1,19 +1,19 @@
-"""
-Message utilities for handling different message formats consistently.
+"""Message utilities for handling different message formats consistently.
+
 This module provides a unified interface for working with messages regardless
 of whether they are dictionaries or BaseMessage objects.
 """
 
-from typing import Union, Dict, Any, List, Optional
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage
 import logging
+from typing import Any, Dict, List, Union
+
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 
 logger = logging.getLogger(__name__)
 
 
 def get_message_content(message: Union[Dict[str, Any], BaseMessage]) -> str:
-    """
-    Safely extract content from a message regardless of format.
+    """Safely extract content from a message regardless of format.
     
     Args:
         message: Either a dict with 'content' key or a BaseMessage object
@@ -27,14 +27,27 @@ def get_message_content(message: Union[Dict[str, Any], BaseMessage]) -> str:
     if isinstance(message, dict):
         return message.get("content", "")
     elif hasattr(message, "content"):
-        return message.content
+        content = message.content
+        # Handle cases where content might be a complex type
+        if isinstance(content, str):
+            return content
+        elif isinstance(content, list):
+            # For multimodal messages, join text parts
+            text_parts = []
+            for part in content:
+                if isinstance(part, str):
+                    text_parts.append(part)
+                elif isinstance(part, dict) and "text" in part:
+                    text_parts.append(part["text"])
+            return " ".join(text_parts)
+        else:
+            return str(content)
     else:
         raise TypeError(f"Unsupported message type: {type(message)}. Expected dict or BaseMessage.")
 
 
 def get_message_role(message: Union[Dict[str, Any], BaseMessage]) -> str:
-    """
-    Safely extract role from a message regardless of format.
+    """Safely extract role from a message regardless of format.
     
     Args:
         message: Either a dict with 'role' key or a BaseMessage object
@@ -57,8 +70,7 @@ def get_message_role(message: Union[Dict[str, Any], BaseMessage]) -> str:
 
 
 def convert_to_dict(message: Union[Dict[str, Any], BaseMessage]) -> Dict[str, Any]:
-    """
-    Convert a message to dictionary format.
+    """Convert a message to dictionary format.
     
     Args:
         message: Either a dict or a BaseMessage object
@@ -80,8 +92,7 @@ def convert_to_dict(message: Union[Dict[str, Any], BaseMessage]) -> Dict[str, An
 
 
 def convert_to_base_message(message: Union[Dict[str, Any], BaseMessage]) -> BaseMessage:
-    """
-    Convert a message to BaseMessage format.
+    """Convert a message to BaseMessage format.
     
     Args:
         message: Either a dict or a BaseMessage object
@@ -105,8 +116,7 @@ def convert_to_base_message(message: Union[Dict[str, Any], BaseMessage]) -> Base
 
 def normalize_messages(messages: List[Union[Dict[str, Any], BaseMessage]], 
                       target_format: str = "dict") -> List[Union[Dict[str, Any], BaseMessage]]:
-    """
-    Normalize a list of messages to a consistent format.
+    """Normalize a list of messages to a consistent format.
     
     Args:
         messages: List of messages in mixed formats
@@ -125,8 +135,7 @@ def normalize_messages(messages: List[Union[Dict[str, Any], BaseMessage]],
 
 def count_message_tokens(message: Union[Dict[str, Any], BaseMessage], 
                         encoding_name: str = "cl100k_base") -> int:
-    """
-    Count tokens in a message.
+    """Count tokens in a message.
     
     Args:
         message: The message to count tokens for
@@ -151,8 +160,7 @@ def count_message_tokens(message: Union[Dict[str, Any], BaseMessage],
 
 def truncate_message_content(content: str, max_tokens: int, 
                            encoding_name: str = "cl100k_base") -> str:
-    """
-    Truncate message content to fit within token limit.
+    """Truncate message content to fit within token limit.
     
     Args:
         content: The content to truncate
@@ -183,9 +191,8 @@ def truncate_message_content(content: str, max_tokens: int,
 
 def safe_message_access(messages: List[Union[Dict[str, Any], BaseMessage]], 
                        index: int, 
-                       default: Optional[Union[Dict[str, Any], BaseMessage]] = None) -> Optional[Union[Dict[str, Any], BaseMessage]]:
-    """
-    Safely access a message by index with bounds checking.
+                       default: Union[Dict[str, Any], BaseMessage] | None = None) -> Union[Dict[str, Any], BaseMessage] | None:
+    """Safely access a message by index with bounds checking.
     
     Args:
         messages: List of messages
@@ -206,8 +213,7 @@ def safe_message_access(messages: List[Union[Dict[str, Any], BaseMessage]],
 
 def filter_messages_by_role(messages: List[Union[Dict[str, Any], BaseMessage]], 
                           role: str) -> List[Union[Dict[str, Any], BaseMessage]]:
-    """
-    Filter messages by role.
+    """Filter messages by role.
     
     Args:
         messages: List of messages
@@ -220,8 +226,7 @@ def filter_messages_by_role(messages: List[Union[Dict[str, Any], BaseMessage]],
 
 
 def merge_system_messages(messages: List[Union[Dict[str, Any], BaseMessage]]) -> List[Union[Dict[str, Any], BaseMessage]]:
-    """
-    Merge consecutive system messages into a single message.
+    """Merge consecutive system messages into a single message.
     
     Args:
         messages: List of messages
@@ -232,8 +237,11 @@ def merge_system_messages(messages: List[Union[Dict[str, Any], BaseMessage]]) ->
     if not messages:
         return messages
     
-    result = []
+    result: List[Union[Dict[str, Any], BaseMessage]] = []
     current_system_content = []
+    
+    # Determine the target format based on the first message
+    target_is_dict = isinstance(messages[0], dict) if messages else True
     
     for msg in messages:
         if get_message_role(msg) == "system":
@@ -242,7 +250,7 @@ def merge_system_messages(messages: List[Union[Dict[str, Any], BaseMessage]]) ->
             # If we have accumulated system messages, merge them
             if current_system_content:
                 merged_content = "\n\n".join(current_system_content)
-                if isinstance(messages[0], dict):
+                if target_is_dict:
                     result.append({"role": "system", "content": merged_content})
                 else:
                     result.append(SystemMessage(content=merged_content))
@@ -253,7 +261,7 @@ def merge_system_messages(messages: List[Union[Dict[str, Any], BaseMessage]]) ->
     # Don't forget any trailing system messages
     if current_system_content:
         merged_content = "\n\n".join(current_system_content)
-        if isinstance(messages[0], dict):
+        if target_is_dict:
             result.append({"role": "system", "content": merged_content})
         else:
             result.append(SystemMessage(content=merged_content))

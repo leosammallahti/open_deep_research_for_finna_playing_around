@@ -67,3 +67,6 @@ tmp/
 temp/
 
 .langgraph_api
+
+# Remove legacy duplicate repo
+/original_repo/

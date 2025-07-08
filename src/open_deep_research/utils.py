@@ -1,52 +1,80 @@
-import os
+"""Utility functions for Open Deep Research application.
+
+This module provides core utility functions for web search, content processing,
+text formatting, API integration, and data manipulation used throughout the research workflow.
+"""
 import asyncio
-import json
+import concurrent.futures
 import datetime
-import requests
-import random 
-import concurrent
 import hashlib
+import itertools
+import json
+import os
+import random
+import time
+from collections import defaultdict
+from typing import Annotated, Any, Dict, List, Literal, Union, cast, TYPE_CHECKING, Optional
+from urllib.parse import unquote
+
 import aiohttp
 import httpx
-import time
-from typing import List, Optional, Dict, Any, Union, Literal, Annotated, cast
-from urllib.parse import unquote
-from collections import defaultdict
-import itertools
-
+import requests
+from aiohttp import ClientTimeout
 from exa_py import Exa
-from linkup import LinkupClient
-from tavily import AsyncTavilyClient
+
+# Handle conditional imports with proper typing
+if TYPE_CHECKING:
+    from linkup import LinkupClient
+    LINKUP_AVAILABLE = True  # For type checking, assume it's available
+else:
+    try:
+        from linkup import LinkupClient
+        LINKUP_AVAILABLE = True
+    except ImportError:
+        LINKUP_AVAILABLE = False
+        # Create a proper type-safe placeholder
+        class LinkupClient:  # type: ignore[no-redef]
+            """Placeholder class when linkup is not available."""
+            def __init__(self):
+                raise ImportError("LinkupClient is not available. Please install the linkup package.")
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents.aio import SearchClient as AsyncAzureAISearchClient
-from duckduckgo_search import DDGS 
-from bs4 import BeautifulSoup
-from markdownify import markdownify
-from pydantic import BaseModel
+from bs4 import BeautifulSoup, Tag
+from duckduckgo_search import DDGS
 from langchain.chat_models import init_chat_model
 from langchain.embeddings import init_embeddings
-from langchain_core.documents import Document
-from langchain_core.embeddings import Embeddings
 from langchain_anthropic import ChatAnthropic
-from langchain_core.language_models import BaseChatModel
-from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import InjectedToolArg
-from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_community.retrievers import ArxivRetriever
 from langchain_community.utilities.pubmed import PubMedAPIWrapper
-from langchain_core.tools import tool
+from langchain_community.utilities.arxiv import ArxivAPIWrapper
+from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import BaseMessage
+from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.runnables import RunnableConfig
+from langchain_core.tools import InjectedToolArg, tool
+from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langsmith import traceable
+from markdownify import markdownify
+from pydantic import BaseModel
+from tavily import AsyncTavilyClient
 
-from open_deep_research.configuration import Configuration
-from open_deep_research.state import Section
+from open_deep_research.configuration import WorkflowConfiguration
+from open_deep_research.message_utils import (
+    count_message_tokens,
+    truncate_message_content,
+)
 from open_deep_research.prompts import SUMMARIZATION_PROMPT
+from open_deep_research.pydantic_state import Section
+from open_deep_research.core.logging_utils import get_logger
+
+logger = get_logger(__name__)
 
 
 def get_config_value(value):
-    """
-    Helper function to handle string, dict, and enum cases of configuration values
-    """
+    """Handle string, dict, and enum cases of configuration values."""
     if isinstance(value, str):
         return value
     elif isinstance(value, dict):
@@ -54,9 +82,8 @@ def get_config_value(value):
     else:
         return value.value
 
-def get_search_params(search_api: str, search_api_config: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Filters the search_api_config dictionary to include only parameters accepted by the specified search API.
+def get_search_params(search_api: str, search_api_config: Dict[str, Any] | None) -> Dict[str, Any]:
+    """Filter the search_api_config dictionary to include only parameters accepted by the specified search API.
 
     Args:
         search_api (str): The search API identifier (e.g., "exa", "tavily").
@@ -92,8 +119,8 @@ def deduplicate_and_format_sources(
     include_raw_content=True,
     deduplication_strategy: Literal["keep_first", "keep_last"] = "keep_first"
 ):
-    """
-    Takes a list of search responses and formats them into a readable string.
+    """Format a list of search responses into a readable string.
+    
     Limits the raw_content to approximately max_tokens_per_source tokens.
  
     Args:
@@ -142,7 +169,6 @@ def deduplicate_and_format_sources(
             raw_content = source.get('raw_content', '')
             if raw_content is None:
                 raw_content = ''
-                print(f"Warning: No raw_content found for source {source['url']}")
             if len(raw_content) > char_limit:
                 raw_content = raw_content[:char_limit] + "... [truncated]"
             formatted_text += f"Full source content limited to {max_tokens_per_source} tokens: {raw_content}\n\n"
@@ -151,7 +177,7 @@ def deduplicate_and_format_sources(
     return formatted_text.strip()
 
 def format_sections(sections: list[Section]) -> str:
-    """ Format a list of sections into a string """
+    """Format a list of sections into a string."""
     formatted_str = ""
     for idx, section in enumerate(sections, 1):
         formatted_str += f"""
@@ -171,8 +197,7 @@ Content:
 
 @traceable
 async def tavily_search_async(search_queries, max_results: int = 5, topic: Literal["general", "news", "finance"] = "general", include_raw_content: bool = True):
-    """
-    Performs concurrent web searches with the Tavily API
+    """Perform concurrent web searches with the Tavily API.
 
     Args:
         search_queries (List[str]): List of search queries to process
@@ -217,8 +242,7 @@ async def tavily_search_async(search_queries, max_results: int = 5, topic: Liter
 
 @traceable
 async def azureaisearch_search_async(search_queries: list[str], max_results: int = 5, topic: str = "general", include_raw_content: bool = True) -> list[dict]:
-    """
-    Performs concurrent web searches using the Azure AI Search API.
+    """Perform concurrent web searches using the Azure AI Search API.
 
     Args:
         search_queries (List[str]): list of search queries to process
@@ -233,23 +257,32 @@ async def azureaisearch_search_async(search_queries: list[str], max_results: int
     # ensure all environment variables are set
     if not all(var in os.environ for var in ["AZURE_AI_SEARCH_ENDPOINT", "AZURE_AI_SEARCH_INDEX_NAME", "AZURE_AI_SEARCH_API_KEY"]):
         raise ValueError("Missing required environment variables for Azure Search API which are: AZURE_AI_SEARCH_ENDPOINT, AZURE_AI_SEARCH_INDEX_NAME, AZURE_AI_SEARCH_API_KEY")
+    
+    # Since we've verified the environment variables exist, they won't be None
     endpoint = os.getenv("AZURE_AI_SEARCH_ENDPOINT")
     index_name = os.getenv("AZURE_AI_SEARCH_INDEX_NAME")
-    credential = AzureKeyCredential(os.getenv("AZURE_AI_SEARCH_API_KEY"))
+    api_key = os.getenv("AZURE_AI_SEARCH_API_KEY")
+    
+    assert endpoint is not None, "AZURE_AI_SEARCH_ENDPOINT should not be None after validation"
+    assert index_name is not None, "AZURE_AI_SEARCH_INDEX_NAME should not be None after validation"
+    assert api_key is not None, "AZURE_AI_SEARCH_API_KEY should not be None after validation"
+    
+    credential = AzureKeyCredential(api_key)
 
     reranker_key = '@search.reranker_score'
 
     async with AsyncAzureAISearchClient(endpoint, index_name, credential) as client:
         async def do_search(query: str) -> dict:
             # search query 
+            # Note: Azure AI Search accepts vector queries as dictionaries which are converted internally to VectorQuery objects
             paged = await client.search(
                 search_text=query,
-                vector_queries=[{
+                vector_queries=cast(Any, [{
                     "fields": "vector",
                     "kind": "text",
                     "text": query,
                     "exhaustive": True
-                }],
+                }]),
                 semantic_configuration_name="fraunhofer-rag-semantic-config",
                 query_type="semantic",
                 select=["url", "title", "chunk", "creationTime", "lastModifiedTime"],
@@ -276,109 +309,81 @@ async def azureaisearch_search_async(search_queries: list[str], max_results: int
 
 
 @traceable
-def perplexity_search(search_queries):
-    """Search the web using the Perplexity API.
-    
-    Args:
-        search_queries (List[SearchQuery]): List of search queries to process
-  
-    Returns:
-        List[dict]: List of search responses from Perplexity API, one per query. Each response has format:
-            {
-                'query': str,                    # The original search query
-                'follow_up_questions': None,      
-                'answer': None,
-                'images': list,
-                'results': [                     # List of search results
-                    {
-                        'title': str,            # Title of the search result
-                        'url': str,              # URL of the result
-                        'content': str,          # Summary/snippet of content
-                        'score': float,          # Relevance score
-                        'raw_content': str|None  # Full content or None for secondary citations
-                    },
-                    ...
-                ]
-            }
-    """
+async def perplexity_search_async(search_queries: List[str]):
+    """Perform concurrent web searches using the Perplexity API asynchronously.
 
+    Args:
+        search_queries (List[str]): A list of queries to search for.
+
+    Returns:
+        list[dict]: A list of search results.
+    """
+    if not os.environ.get("PERPLEXITY_API_KEY"):
+        raise ValueError("PERPLEXITY_API_KEY environment variable is not set.")
+
+    url = "https://api.perplexity.ai/chat/completions"
     headers = {
         "accept": "application/json",
         "content-type": "application/json",
-        "Authorization": f"Bearer {os.getenv('PERPLEXITY_API_KEY')}"
+        "authorization": f"Bearer {os.environ['PERPLEXITY_API_KEY']}"
     }
-    
-    search_docs = []
-    for query in search_queries:
 
+    async def perform_search(query: str, client: httpx.AsyncClient):
         payload = {
-            "model": "sonar-pro",
+            "model": "pplx-70b-online",
             "messages": [
-                {
-                    "role": "system",
-                    "content": "Search the web and provide factual information with sources."
-                },
-                {
-                    "role": "user",
-                    "content": query
-                }
-            ]
+                {"role": "system", "content": "You are an AI assistant that provides concise and accurate answers."},
+                {"role": "user", "content": query}
+            ],
+            "max_tokens": 1000,
+            "temperature": 0.7,
+            "top_p": 1,
+            "stream": False,
+            "presence_penalty": 0,
+            "frequency_penalty": 1
         }
-        
-        response = requests.post(
-            "https://api.perplexity.ai/chat/completions",
-            headers=headers,
-            json=payload
-        )
-        response.raise_for_status()  # Raise exception for bad status codes
-        
-        # Parse the response
-        data = response.json()
-        content = data["choices"][0]["message"]["content"]
-        citations = data.get("citations", ["https://perplexity.ai"])
-        
-        # Create results list for this query
-        results = []
-        
-        # First citation gets the full content
-        results.append({
-            "title": f"Perplexity Search, Source 1",
-            "url": citations[0],
-            "content": content,
-            "raw_content": content,
-            "score": 1.0  # Adding score to match Tavily format
-        })
-        
-        # Add additional citations without duplicating content
-        for i, citation in enumerate(citations[1:], start=2):
-            results.append({
-                "title": f"Perplexity Search, Source {i}",
-                "url": citation,
-                "content": "See primary source for full content",
-                "raw_content": None,
-                "score": 0.5  # Lower score for secondary sources
-            })
-        
-        # Format response to match Tavily structure
-        search_docs.append({
-            "query": query,
-            "follow_up_questions": None,
-            "answer": None,
-            "images": [],
-            "results": results
-        })
+        try:
+            response = await client.post(url, json=payload, headers=headers, timeout=30.0)
+            response.raise_for_status()
+            response_json = response.json()
+            content = response_json['choices'][0]['message']['content']
+            
+            # Create a simplified results structure
+            results = [{
+                "title": f"Perplexity AI Answer for '{query}'",
+                "url": "https://www.perplexity.ai/",
+                "content": content,
+                "score": 1.0,
+                "raw_content": content,
+            }]
+
+            return {
+                "query": query,
+                "follow_up_questions": None,
+                "answer": None,
+                "images": [],
+                "results": results
+            }
+        except httpx.HTTPStatusError:
+            return {"query": query, "results": []}
+        except Exception:
+            return {"query": query, "results": []}
+
+    async with httpx.AsyncClient() as client:
+        tasks = [perform_search(query, client) for query in search_queries]
+        results = await asyncio.gather(*tasks)
     
-    return search_docs
+    return results
 
 @traceable
-async def exa_search(search_queries, max_characters: Optional[int] = None, num_results=5, 
-                     include_domains: Optional[List[str]] = None, 
-                     exclude_domains: Optional[List[str]] = None,
-                     subpages: Optional[int] = None):
+async def exa_search(search_queries, max_characters: int | None = None, num_results=5, 
+                     include_domains: List[str] | None = None, 
+                     exclude_domains: List[str] | None = None,
+                     subpages: int | None = None):
     """Search the web using the Exa API.
     
     Args:
-        search_queries (List[SearchQuery]): List of search queries to process
+        search_queries (List[str]): List of search queries to process
         max_characters (int, optional): Maximum number of characters to retrieve for each result's raw content.
                                        If None, the text parameter will be set to True instead of an object.
         num_results (int): Number of search results per query. Defaults to 5.
@@ -555,7 +560,6 @@ async def exa_search(search_queries, max_characters: Optional[int] = None, num_r
             search_docs.append(result)
         except Exception as e:
             # Handle exceptions gracefully
-            print(f"Error processing query '{query}': {str(e)}")
             # Add a placeholder result for failed queries to maintain index alignment
             search_docs.append({
                 "query": query,
@@ -568,15 +572,13 @@ async def exa_search(search_queries, max_characters: Optional[int] = None, num_r
             
             # Add additional delay if we hit a rate limit error
             if "429" in str(e):
-                print("Rate limit exceeded. Adding additional delay...")
                 await asyncio.sleep(1.0)  # Add a longer delay if we hit a rate limit
     
     return search_docs
 
 @traceable
 async def arxiv_search_async(search_queries, load_max_docs=5, get_full_documents=True, load_all_available_meta=True):
-    """
-    Performs concurrent searches on arXiv using the ArxivRetriever.
+    """Perform concurrent searches on arXiv using the ArxivRetriever.
 
     Args:
         search_queries (List[str]): List of search queries or article IDs
@@ -606,8 +608,8 @@ async def arxiv_search_async(search_queries, load_max_docs=5, get_full_documents
     
     async def process_single_query(query):
         try:
-            # Create retriever for each query
-            retriever = ArxivRetriever(
+            # Create retriever for each query - using current LangChain API
+            retriever = ArxivRetriever(  # type: ignore
                 load_max_docs=load_max_docs,
                 get_full_documents=get_full_documents,
                 load_all_available_meta=load_all_available_meta
@@ -641,7 +643,12 @@ async def arxiv_search_async(search_queries, load_max_docs=5, get_full_documents
 
                 # Add publication information
                 published = metadata.get('Published')
-                published_str = published.isoformat() if hasattr(published, 'isoformat') else str(published) if published else ''
+                published_str = ''
+                if published:
+                    if hasattr(published, 'isoformat'):
+                        published_str = published.isoformat()
+                    else:
+                        published_str = str(published)
                 if published_str:
                     content_parts.append(f"Published: {published_str}")
 
@@ -691,7 +698,6 @@ async def arxiv_search_async(search_queries, load_max_docs=5, get_full_documents
             }
         except Exception as e:
             # Handle exceptions gracefully
-            print(f"Error processing arXiv query '{query}': {str(e)}")
             return {
                 'query': query,
                 'follow_up_questions': None,
@@ -713,7 +719,6 @@ async def arxiv_search_async(search_queries, load_max_docs=5, get_full_documents
             search_docs.append(result)
         except Exception as e:
             # Handle exceptions gracefully
-            print(f"Error processing arXiv query '{query}': {str(e)}")
             search_docs.append({
                 'query': query,
                 'follow_up_questions': None,
@@ -725,15 +730,13 @@ async def arxiv_search_async(search_queries, load_max_docs=5, get_full_documents
             
             # Add additional delay if we hit a rate limit error
             if "429" in str(e) or "Too Many Requests" in str(e):
-                print("ArXiv rate limit exceeded. Adding additional delay...")
                 await asyncio.sleep(5.0)  # Add a longer delay if we hit a rate limit
     
     return search_docs
 
 @traceable
 async def pubmed_search_async(search_queries, top_k_results=5, email=None, api_key=None, doc_content_chars_max=4000):
-    """
-    Performs concurrent searches on PubMed using the PubMedAPIWrapper.
+    """Perform concurrent searches on PubMed using the PubMedAPIWrapper.
 
     Args:
         search_queries (List[str]): List of search queries
@@ -771,7 +774,8 @@ async def pubmed_search_async(search_queries, top_k_results=5, email=None, api_k
                 top_k_results=top_k_results,
                 doc_content_chars_max=doc_content_chars_max,
                 email=email if email else "your_email@example.com",
-                api_key=api_key if api_key else ""
+                api_key=api_key if api_key else "",
+                parse=True  # Default to parsing the results
             )
             
             # Run the synchronous wrapper in a thread pool
@@ -780,7 +784,6 @@ async def pubmed_search_async(search_queries, top_k_results=5, email=None, api_k
             # Use wrapper.lazy_load instead of load to get better visibility
             docs = await loop.run_in_executor(None, lambda: list(wrapper.lazy_load(query)))
             
-            print(f"Query '{query}' returned {len(docs)} results")
             
             results = []
             # Assign decreasing scores based on the order
@@ -825,10 +828,7 @@ async def pubmed_search_async(search_queries, top_k_results=5, email=None, api_k
             }
         except Exception as e:
             # Handle exceptions with more detailed information
-            error_msg = f"Error processing PubMed query '{query}': {str(e)}"
-            print(error_msg)
-            import traceback
-            print(traceback.format_exc())  # Print full traceback for debugging
+            logger.error("Error processing PubMed query '%s': %s", query, str(e))
             
             return {
                 'query': query,
@@ -861,8 +861,7 @@ async def pubmed_search_async(search_queries, top_k_results=5, email=None, api_k
             
         except Exception as e:
             # Handle exceptions gracefully
-            error_msg = f"Error in main loop processing PubMed query '{query}': {str(e)}"
-            print(error_msg)
+            logger.error("Error in main loop processing PubMed query '%s': %s", query, str(e))
             
             search_docs.append({
                 'query': query,
@@ -879,12 +878,11 @@ async def pubmed_search_async(search_queries, top_k_results=5, email=None, api_k
     return search_docs
 
 @traceable
-async def linkup_search(search_queries, depth: Optional[str] = "standard"):
-    """
-    Performs concurrent web searches using the Linkup API.
+async def linkup_search(search_queries: List[str], depth: str | None = "standard"):
+    """Perform concurrent web searches using the Linkup API.
 
     Args:
-        search_queries (List[SearchQuery]): List of search queries to process
+        search_queries (List[str]): List of search queries to process
         depth (str, optional): "standard" (default)  or "deep". More details here https://docs.linkup.so/pages/documentation/get-started/concepts
 
     Returns:
@@ -900,6 +898,10 @@ async def linkup_search(search_queries, depth: Optional[str] = "standard"):
                 ]
             }
     """
+    if not LINKUP_AVAILABLE:
+        raise ImportError("LinkupClient is not available. Please install the linkup package to use this search API.")
+    
+    # LinkupClient is now properly typed and will raise an error if not available
     client = LinkupClient()
     search_tasks = []
     for query in search_queries:
@@ -926,8 +928,8 @@ async def linkup_search(search_queries, depth: Optional[str] = "standard"):
 
 @traceable
 async def google_search_async(search_queries: Union[str, List[str]], max_results: int = 5, include_raw_content: bool = True):
-    """
-    Performs concurrent web searches using Google.
+    """Perform concurrent web searches using Google.
+    
     Uses Google Custom Search API if environment variables are set, otherwise falls back to web scraping.
 
     Args:
@@ -938,8 +940,6 @@ async def google_search_async(search_queries: Union[str, List[str]], max_results
     Returns:
         List[dict]: List of search responses from Google, one per query
     """
-
-
     # Check for API credentials from environment variables
     api_key = os.environ.get("GOOGLE_API_KEY")
     cx = os.environ.get("GOOGLE_CX")
@@ -951,7 +951,7 @@ async def google_search_async(search_queries: Union[str, List[str]], max_results
     
     # Define user agent generator
     def get_useragent():
-        """Generates a random user agent string."""
+        """Generate a random user agent string."""
         lynx_version = f"Lynx/{random.randint(2, 3)}.{random.randint(8, 9)}.{random.randint(0, 2)}"
         libwww_version = f"libwww-FM/{random.randint(2, 3)}.{random.randint(13, 15)}"
         ssl_mm_version = f"SSL-MM/{random.randint(1, 2)}.{random.randint(3, 5)}"
@@ -984,13 +984,11 @@ async def google_search_async(search_queries: Union[str, List[str]], max_results
                             'start': start_index,
                             'num': num
                         }
-                        print(f"Requesting {num} results for '{query}' from Google API...")
 
                         async with aiohttp.ClientSession() as session:
                             async with session.get('https://www.googleapis.com/customsearch/v1', params=params) as response:
                                 if response.status != 200:
-                                    error_text = await response.text()
-                                    print(f"API error: {response.status}, {error_text}")
+                                    await response.text()
                                     break
                                     
                                 data = await response.json()
@@ -1017,7 +1015,6 @@ async def google_search_async(search_queries: Union[str, List[str]], max_results
                 else:
                     # Add delay between requests
                     await asyncio.sleep(0.5 + random.random() * 1.5)
-                    print(f"Scraping Google for '{query}'...")
 
                     # Define scraping function
                     def google_search(query, max_results):
@@ -1057,12 +1054,18 @@ async def google_search_async(search_queries: Union[str, List[str]], max_results
                                 new_results = 0
                                 
                                 for result in result_block:
+                                    # Type checking for BeautifulSoup elements
+                                    if not isinstance(result, Tag):
+                                        continue
+                                    
                                     link_tag = result.find("a", href=True)
-                                    title_tag = link_tag.find("span", class_="CVA68e") if link_tag else None
+                                    title_tag = link_tag.find("span", class_="CVA68e") if isinstance(link_tag, Tag) else None
                                     description_tag = result.find("span", class_="FrIlee")
                                     
-                                    if link_tag and title_tag and description_tag:
-                                        link = unquote(link_tag["href"].split("&")[0].replace("/url?q=", ""))
+                                    if isinstance(link_tag, Tag) and isinstance(title_tag, Tag) and isinstance(description_tag, Tag):
+                                        href_attr = link_tag.get("href", "")
+                                        if isinstance(href_attr, str):
+                                            link = unquote(href_attr.split("&")[0].replace("/url?q=", ""))
                                         
                                         if link in fetched_links:
                                             continue
@@ -1094,8 +1097,7 @@ async def google_search_async(search_queries: Union[str, List[str]], max_results
                             
                             return search_results
                                 
-                        except Exception as e:
-                            print(f"Error in Google search for '{query}': {str(e)}")
+                        except Exception:
                             return []
                     
                     # Execute search in thread pool
@@ -1125,7 +1127,7 @@ async def google_search_async(search_queries: Union[str, List[str]], max_results
                                 
                                 try:
                                     await asyncio.sleep(0.2 + random.random() * 0.6)
-                                    async with session.get(url, headers=headers, timeout=10) as response:
+                                    async with session.get(url, headers=headers, timeout=ClientTimeout(total=10)) as response:
                                         if response.status == 200:
                                             # Check content type to handle binary files
                                             content_type = response.headers.get('Content-Type', '').lower()
@@ -1144,7 +1146,6 @@ async def google_search_async(search_queries: Union[str, List[str]], max_results
                                                     # Fallback if we still have decoding issues
                                                     result['raw_content'] = f"[Could not decode content: {str(ude)}]"
                                 except Exception as e:
-                                    print(f"Warning: Failed to fetch content for {url}: {str(e)}")
                                     result['raw_content'] = f"[Error fetching content: {str(e)}]"
                                 return result
                         
@@ -1153,7 +1154,6 @@ async def google_search_async(search_queries: Union[str, List[str]], max_results
                         
                         updated_results = await asyncio.gather(*fetch_tasks)
                         results = updated_results
-                        print(f"Fetched full content for {len(results)} results")
                 
                 return {
                     "query": query,
@@ -1162,8 +1162,7 @@ async def google_search_async(search_queries: Union[str, List[str]], max_results
                     "images": [],
                     "results": results
                 }
-            except Exception as e:
-                print(f"Error in Google search for query '{query}': {str(e)}")
+            except Exception:
                 return {
                     "query": query,
                     "follow_up_questions": None,
@@ -1186,8 +1185,7 @@ async def google_search_async(search_queries: Union[str, List[str]], max_results
             executor.shutdown(wait=False)
 
 async def scrape_pages(titles: List[str], urls: List[str]) -> str:
-    """
-    Scrapes content from a list of URLs and formats it into a readable markdown document.
+    """Scrapes content from a list of URLs and formats it into a readable markdown document.
     
     This function:
     1. Takes a list of page titles and URLs
@@ -1203,7 +1201,6 @@ async def scrape_pages(titles: List[str], urls: List[str]) -> str:
         str: A formatted string containing the full content of each page in markdown format,
              with clear section dividers and source attribution
     """
-    
     # Create an async HTTP client
     async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
         pages = []
@@ -1234,7 +1231,7 @@ async def scrape_pages(titles: List[str], urls: List[str]) -> str:
                 pages.append(f"Error fetching URL: {str(e)}")
         
         # Create formatted output
-        formatted_output = f"Search results: \n\n"
+        formatted_output = "Search results: \n\n"
         
         for i, (title, url, page) in enumerate(zip(titles, urls, pages)):
             formatted_output += f"\n\n--- SOURCE {i+1}: {title} ---\n"
@@ -1246,7 +1243,7 @@ async def scrape_pages(titles: List[str], urls: List[str]) -> str:
 
 @tool
 async def duckduckgo_search(search_queries: List[str]):
-    """Perform searches using DuckDuckGo with retry logic to handle rate limits
+    """Perform searches using DuckDuckGo with retry logic to handle rate limits.
     
     Args:
         search_queries (List[str]): List of search queries to process
@@ -1273,7 +1270,6 @@ async def duckduckgo_search(search_queries: List[str]):
                         if retry_count > 0:
                             # Random delay with exponential backoff
                             delay = backoff_factor ** retry_count + random.random()
-                            print(f"Retry {retry_count}/{max_retries} for query '{query}' after {delay:.2f}s delay")
                             time.sleep(delay)
                             
                             # Add a random element to the query to bypass caching/rate limits
@@ -1307,15 +1303,12 @@ async def duckduckgo_search(search_queries: List[str]):
                     # Store the exception and retry
                     last_exception = e
                     retry_count += 1
-                    print(f"DuckDuckGo search error: {str(e)}. Retrying {retry_count}/{max_retries}")
                     
                     # If not a rate limit error, don't retry
                     if "Ratelimit" not in str(e) and retry_count >= 1:
-                        print(f"Non-rate limit error, stopping retries: {str(e)}")
                         break
             
             # If we reach here, all retries failed
-            print(f"All retries failed for query '{query}': {str(last_exception)}")
             # Return empty results but with query info preserved
             return {
                 'query': query,
@@ -1365,29 +1358,30 @@ async def tavily_search(
     queries: List[str],
     max_results: Annotated[int, InjectedToolArg] = 5,
     topic: Annotated[Literal["general", "news", "finance"], InjectedToolArg] = "general",
-    config: RunnableConfig = None
+    include_raw_content: bool = False,
+    config: Optional[RunnableConfig] = None
 ) -> str:
-    """
-    Fetches results from Tavily search API.
+    """Fetch results from Tavily search API.
 
     Args:
         queries (List[str]): List of search queries
         max_results (int): Maximum number of results to return
         topic (Literal['general', 'news', 'finance']): Topic to filter results by
+        include_raw_content (bool): Whether to include raw content in the results
 
     Returns:
         str: A formatted string of search results
     """
-    # Use tavily_search_async with include_raw_content=True to get content directly
+    # Use tavily_search_async with include_raw_content parameter
     search_results = await tavily_search_async(
         queries,
         max_results=max_results,
         topic=topic,
-        include_raw_content=True
+        include_raw_content=include_raw_content
     )
 
     # Format the search results directly using the raw_content already provided
-    formatted_output = f"Search results: \n\n"
+    formatted_output = "Search results: \n\n"
     
     # Deduplicate results by URL
     unique_results = {}
@@ -1400,7 +1394,7 @@ async def tavily_search(
     async def noop():
         return None
 
-    configurable = Configuration.from_runnable_config(config)
+    configurable = WorkflowConfiguration.from_runnable_config(config)
     max_char_to_include = 30_000
     # TODO: share this behavior across all search implementations / tools
     if configurable.process_search_results == "summarize":
@@ -1409,12 +1403,20 @@ async def tavily_search(
         else:
             extra_kwargs = {}
 
-        summarization_model = init_chat_model(
-            model=configurable.summarization_model,
-            model_provider=configurable.summarization_model_provider,
-            max_retries=configurable.max_structured_output_retries,
-            **extra_kwargs
-        )
+        # Build init_chat_model parameters carefully
+        init_params: Dict[str, Any] = {
+            "model": configurable.summarization_model,
+            "model_provider": configurable.summarization_model_provider,
+            "max_retries": configurable.max_structured_output_retries,
+        }
+        # Add extra_kwargs only if they're compatible
+        if extra_kwargs and isinstance(extra_kwargs, dict):
+            # Only add known compatible parameters
+            for key, value in extra_kwargs.items():
+                if key in ["betas"] and isinstance(value, list):
+                    init_params[key] = value
+        
+        summarization_model = init_chat_model(**init_params)
         summarization_tasks = [
             noop() if not result.get("raw_content") else summarize_webpage(summarization_model, result['raw_content'][:max_char_to_include])
             for result in unique_results.values()
@@ -1429,8 +1431,12 @@ async def tavily_search(
         results_by_query = itertools.groupby(unique_results.values(), key=lambda x: x['query'])
         all_retrieved_docs = []
         for query, query_results in results_by_query:
-            retrieved_docs = split_and_rerank_search_results(embeddings, query, query_results)
-            all_retrieved_docs.extend(retrieved_docs)
+            # Convert iterator to list and ensure we have proper Embeddings type
+            query_results_list = list(query_results)
+            # Type check for embeddings
+            if isinstance(embeddings, Embeddings):
+                retrieved_docs = split_and_rerank_search_results(embeddings, query, query_results_list)
+                all_retrieved_docs.extend(retrieved_docs)
 
         stitched_docs = stitch_documents_by_url(all_retrieved_docs)
         unique_results = {
@@ -1455,12 +1461,11 @@ async def tavily_search(
 
 @tool
 async def azureaisearch_search(queries: List[str], max_results: int = 5, topic: str = "general") -> str:
-    """
-    Fetches results from Azure AI Search API.
-    
+    """Fetch results from Azure AI Search API.
+
     Args:
         queries (List[str]): List of search queries
-        
+
     Returns:
         str: A formatted string of search results
     """
@@ -1473,7 +1478,7 @@ async def azureaisearch_search(queries: List[str], max_results: int = 5, topic: 
     )
 
     # Format the search results directly using the raw_content already provided
-    formatted_output = f"Search results: \n\n"
+    formatted_output = "Search results: \n\n"
     
     # Deduplicate results by URL
     unique_results = {}
@@ -1499,28 +1504,25 @@ async def azureaisearch_search(queries: List[str], max_results: int = 5, topic: 
 
 
 async def select_and_execute_search(search_api: str, query_list: list[str], params_to_pass: dict) -> str:
-    """Select and execute the appropriate search API.
-    
+    """Select and execute the appropriate search function based on the search_api string.
+
     Args:
-        search_api: Name of the search API to use
-        query_list: List of search queries to execute
-        params_to_pass: Parameters to pass to the search API
-        
+        search_api (str): The search API to use (e.g., "tavily", "perplexity", "none").
+        query_list (list[str]): The list of search queries.
+        params_to_pass (dict): A dictionary of parameters for the search function.
+
     Returns:
-        Formatted string containing search results
-        
-    Raises:
-        ValueError: If an unsupported search API is specified
+        str: The formatted search results.
     """
+    # Handle "none" search API - return empty results
+    if search_api.lower() == "none":
+        return "No search performed (search API set to 'none')."
+    
+    # Web search
     if search_api == "tavily":
-        # Tavily search tool used with both workflow and agent 
-        # and returns a formatted source string
-        return await tavily_search.ainvoke({'queries': query_list, **params_to_pass})
-    elif search_api == "duckduckgo":
-        # DuckDuckGo search tool used with both workflow and agent 
-        return await duckduckgo_search.ainvoke({'search_queries': query_list})
+        search_results = await tavily_search_async(query_list, **params_to_pass)
     elif search_api == "perplexity":
-        search_results = perplexity_search(query_list, **params_to_pass)
+        search_results = await perplexity_search_async(query_list)
     elif search_api == "exa":
         search_results = await exa_search(query_list, **params_to_pass)
     elif search_api == "arxiv":
@@ -1531,6 +1533,9 @@ async def select_and_execute_search(search_api: str, query_list: list[str], para
         search_results = await linkup_search(query_list, **params_to_pass)
     elif search_api == "googlesearch":
         search_results = await google_search_async(query_list, **params_to_pass)
+    elif search_api == "duckduckgo":
+        # duckduckgo_search returns a formatted string directly, not a list of dicts
+        return await duckduckgo_search.ainvoke({"search_queries": query_list})
     elif search_api == "azureaisearch":
         search_results = await azureaisearch_search_async(query_list, **params_to_pass)
     else:
@@ -1540,6 +1545,7 @@ async def select_and_execute_search(search_api: str, query_list: list[str], para
 
 
 class Summary(BaseModel):
+    """Summary model for webpage content."""
     summary: str
     key_excerpts: list[str]
 
@@ -1547,7 +1553,7 @@ class Summary(BaseModel):
 async def summarize_webpage(model: BaseChatModel, webpage_content: str) -> str:
     """Summarize webpage content."""
     try:
-        user_input_content = "Please summarize the article"
+        user_input_content: Union[str, List[Dict[str, Any]]] = "Please summarize the article"
         if isinstance(model, ChatAnthropic):
             user_input_content = [{
                 "type": "text",
@@ -1559,7 +1565,7 @@ async def summarize_webpage(model: BaseChatModel, webpage_content: str) -> str:
             {"role": "system", "content": SUMMARIZATION_PROMPT.format(webpage_content=webpage_content)},
             {"role": "user", "content": user_input_content},
         ])
-    except:
+    except Exception:
         # fall back on the raw content
         return webpage_content
 
@@ -1567,10 +1573,26 @@ async def summarize_webpage(model: BaseChatModel, webpage_content: str) -> str:
         excerpts_str = "\n".join(f'- {e}' for e in summary.key_excerpts)
         return f"""<summary>\n{summary.summary}\n</summary>\n\n<key_excerpts>\n{excerpts_str}\n</key_excerpts>"""
 
-    return format_summary(summary)
+    # Ensure summary is the correct type
+    if isinstance(summary, Summary):
+        return format_summary(summary)
+    else:
+        # Fallback for unexpected types
+        return webpage_content
 
 
 def split_and_rerank_search_results(embeddings: Embeddings, query: str, search_results: list[dict], max_chunks: int = 5):
+    """Split search results into chunks and rerank them based on relevance to the query.
+    
+    Args:
+        embeddings: The embeddings model to use for similarity search
+        query: The search query to use for relevance ranking
+        search_results: List of search result dictionaries
+        max_chunks: Maximum number of chunks to return
+        
+    Returns:
+        List of the most relevant document chunks
+    """
     # split webpage content into chunks
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1500, chunk_overlap=200, add_start_index=True
@@ -1594,6 +1616,14 @@ def split_and_rerank_search_results(embeddings: Embeddings, query: str, search_r
 
 
 def stitch_documents_by_url(documents: list[Document]) -> list[Document]:
+    """Stitch together document chunks from the same URL while deduplicating content.
+    
+    Args:
+        documents: List of Document objects to stitch together
+        
+    Returns:
+        List of Document objects with content from the same URL combined
+    """
     url_to_docs: defaultdict[str, list[Document]] = defaultdict(list)
     url_to_snippet_hashes: defaultdict[str, set[str]] = defaultdict(set)
     for doc in documents:
@@ -1620,16 +1650,284 @@ def stitch_documents_by_url(documents: list[Document]) -> list[Document]:
 
 def get_today_str() -> str:
     """Get current date in a human-readable format."""
-    return datetime.datetime.now().strftime("%a %b %-d, %Y")
+    now = datetime.datetime.now()
+    # Use cross-platform approach to avoid leading zero in day
+    return now.strftime("%a %b {}, %Y").format(now.day)
 
 
 async def load_mcp_server_config(path: str) -> dict:
     """Load MCP server configuration from a file."""
 
     def _load():
-        with open(path, "r") as f:
+        with open(path) as f:
             config = json.load(f)
         return config
 
     config = await asyncio.to_thread(_load)
     return config
+
+
+def is_api_key_available(provider: str) -> bool:
+    """Check if an API key is available for a given provider.
+    
+    Args:
+        provider: The provider name (e.g., "openai", "anthropic", "deepseek")
+        
+    Returns:
+        True if the API key is available, False otherwise
+    """
+    import os
+    
+    # Map provider names to their environment variable names
+    provider_env_map = {
+        "openai": "OPENAI_API_KEY",
+        "anthropic": "ANTHROPIC_API_KEY", 
+        "deepseek": "DEEPSEEK_API_KEY",
+        "together": "TOGETHER_API_KEY",
+        "groq": "GROQ_API_KEY",
+        "google": "GOOGLE_API_KEY",
+        "cohere": "COHERE_API_KEY",
+        "mistral": "MISTRAL_API_KEY",
+        "perplexity": "PERPLEXITY_API_KEY",
+        "tavily": "TAVILY_API_KEY",
+        "exa": "EXA_API_KEY",
+        "azure": "AZURE_AI_SEARCH_API_KEY",
+    }
+    
+    env_var = provider_env_map.get(provider.lower())
+    if not env_var:
+        return False
+    
+    api_key = os.environ.get(env_var)
+    return api_key is not None and api_key.strip() != ""
+
+
+def _create_fallback_instance(schema_class):
+    """Create a fallback instance of a schema class with appropriate defaults.
+    
+    Args:
+        schema_class: The Pydantic schema class to create a fallback instance for
+        
+    Returns:
+        A valid instance of the schema class with sensible defaults
+    """
+    # Import here to avoid circular imports
+    from .pydantic_state import SectionOutput, Sections, Feedback, Queries
+    
+    # Handle specific schema classes with appropriate defaults
+    if schema_class == SectionOutput:
+        return SectionOutput(section_content="Unable to generate section content. Please try again.")
+    elif schema_class == Sections:
+        return Sections(sections=[])
+    elif schema_class.__name__ == "Feedback":
+        # Handle Feedback class dynamically since it might not be imported
+        try:
+            return schema_class(grade="fail", follow_up_queries=[])
+        except Exception:
+            # If we can't create it with those defaults, try with no args
+            return schema_class()
+    elif schema_class.__name__ == "Queries":
+        # Handle Queries class with empty list
+        try:
+            return schema_class(queries=[])
+        except Exception:
+            return schema_class()
+    else:
+        # For other schema classes, try to create with no args first
+        try:
+            return schema_class()
+        except Exception:
+            # Try to create a minimal instance with likely required fields
+            try:
+                # Get the schema fields and try to provide minimal defaults
+                fields = getattr(schema_class, '__fields__', {})
+                defaults = {}
+                
+                # Common fallback values for different field types
+                for field_name, field_info in fields.items():
+                    if hasattr(field_info, 'annotation'):
+                        field_type = field_info.annotation
+                        # Handle common types
+                        if field_type is str:
+                            defaults[field_name] = "Fallback value"
+                        elif field_type is int:
+                            defaults[field_name] = 0
+                        elif field_type is bool:
+                            defaults[field_name] = False
+                        elif field_type is list or str(field_type).startswith('typing.List'):
+                            defaults[field_name] = []
+                        elif field_type is dict:
+                            defaults[field_name] = {}
+                
+                return schema_class(**defaults)
+            except Exception:
+                # Last resort: return a basic object that might work
+                return schema_class.__new__(schema_class)
+
+
+async def get_structured_output_with_fallback(model, schema_class, messages, model_id=None):
+    """Get structured output from a model with fallback handling.
+    
+    Args:
+        model: The language model to use
+        schema_class: The Pydantic schema class to structure the output
+        messages: List of messages to send to the model
+        model_id: Optional model identifier for debugging
+        
+    Returns:
+        Structured output matching the schema_class
+    """
+    try:
+        # Try the standard structured output approach
+        structured_model = model.with_structured_output(schema_class)
+        result = await structured_model.ainvoke(messages)
+        return result
+    except Exception:
+        # If structured output fails, fall back to prompt-based parsing
+        
+        # Add JSON format instructions to the last message
+        parser = PydanticOutputParser(pydantic_object=schema_class)
+        format_instructions = parser.get_format_instructions()
+        
+        # Modify the last message to include format instructions
+        modified_messages = messages.copy()
+        if modified_messages and hasattr(modified_messages[-1], 'content'):
+            modified_messages[-1].content += f"\n\n{format_instructions}"
+        
+        # Get raw response
+        raw_response = await model.ainvoke(modified_messages)
+        
+        # Parse the response
+        try:
+            if hasattr(raw_response, 'content'):
+                response_text = raw_response.content
+            else:
+                response_text = str(raw_response)
+                
+            # Try to parse JSON from the response
+            parsed_result = parser.parse(response_text)
+            return parsed_result
+        except Exception:
+            # Return a minimal valid instance of the schema with appropriate defaults
+            return _create_fallback_instance(schema_class)
+
+
+def filter_think_tokens(text):
+    """Remove <think>...</think> tokens from text.
+    
+    Args:
+        text: Input text that may contain think tokens
+        
+    Returns:
+        Text with think tokens removed
+    """
+    if not isinstance(text, str):
+        return text
+    
+    # Remove <think>...</think> blocks
+    import re
+    pattern = r'<think>.*?</think>'
+    return re.sub(pattern, '', text, flags=re.DOTALL).strip()
+
+
+def format_sections_for_final_report(sections):
+    """Format sections for the final report."""
+    formatted_text = ""
+    for section in sections:
+        # Use # for introduction/report title, ## for all other sections
+        if section.name.lower() in ['introduction', 'intro']:
+            formatted_text += f"\n\n# {section.name}\n\n{section.content}\n"
+        else:
+            formatted_text += f"\n\n## {section.name}\n\n{section.content}\n"
+    return formatted_text
+
+
+def format_sections_for_context(sections):
+    """Format sections to provide context for other operations."""
+    formatted_text = "Current sections:\n"
+    for i, section in enumerate(sections, 1):
+        formatted_text += f"\n{i}. {section.name}\n"
+        formatted_text += f"   Description: {section.description}\n"
+        formatted_text += f"   Content: {section.content[:200]}...\n" if len(section.content) > 200 else f"   Content: {section.content}\n"
+    return formatted_text
+
+
+async def summarize_search_results(source_str: str, max_tokens: int = 6000, model: Optional[str] = None) -> str:
+    """Summarize search results to fit within token limits.
+    
+    Args:
+        source_str: The search results to summarize
+        max_tokens: Maximum number of tokens to allow
+        model: Model identifier for context-aware summarization
+        
+    Returns:
+        Summarized search results
+    """
+    # Simple truncation for now - could be enhanced with actual summarization
+    char_limit = max_tokens * 4  # Rough estimate of 4 chars per token
+    if len(source_str) <= char_limit:
+        return source_str
+    
+    return source_str[:char_limit] + "\n\n... [Content truncated to fit model context limits]"
+
+
+def count_messages_tokens(messages: List[Union[Dict[str, Any], BaseMessage]], 
+                         model_name: str = "gpt-3.5-turbo") -> int:
+    """Count tokens in a list of messages."""
+    total_tokens = 0
+    for message in messages:
+        total_tokens += count_message_tokens(message, model_name)
+    return total_tokens
+
+async def truncate_messages_for_context(messages: List[Union[Dict[str, Any], BaseMessage]], 
+                                       max_context_tokens: int, 
+                                       model_name: str = "gpt-3.5-turbo") -> List[Union[Dict[str, Any], BaseMessage]]:
+    """Truncate messages to fit within context limits, preserving the most recent messages."""
+    if not messages:
+        return messages
+    
+    # Count tokens for all messages
+    total_tokens = count_messages_tokens(messages, model_name)
+    
+    # If already within limits, return as-is
+    if total_tokens <= max_context_tokens:
+        return messages
+    
+    # Keep the most recent messages, truncating from the beginning
+    truncated_messages: List[Union[Dict[str, Any], BaseMessage]] = []
+    current_tokens = 0
+    
+    # Start from the most recent message and work backwards
+    for message in reversed(messages):
+        message_tokens = count_message_tokens(message, model_name)
+        
+        if current_tokens + message_tokens <= max_context_tokens:
+            truncated_messages.insert(0, message)
+            current_tokens += message_tokens
+        else:
+            # If this message would exceed the limit, try to truncate its content
+            if isinstance(message, dict):
+                content = message.get('content', '')
+            else:
+                content = message.content
+            
+            # Calculate how many tokens we can fit
+            available_tokens = max_context_tokens - current_tokens
+            
+            if available_tokens > 50:  # Only truncate if we have meaningful space
+                # Ensure content is a string for truncation
+                content_str = str(content) if content is not None else ""
+                truncated_content = truncate_message_content(content_str, available_tokens, model_name)
+                
+                # Create truncated message
+                if isinstance(message, dict):
+                    truncated_message: Union[Dict[str, Any], BaseMessage] = {**message, 'content': truncated_content}
+                else:
+                    truncated_message = type(message)(content=truncated_content, **{
+                        k: v for k, v in message.__dict__.items() if k != 'content'
+                    })
+                
+                truncated_messages.insert(0, truncated_message)
+            break
+    
+    return truncated_messages

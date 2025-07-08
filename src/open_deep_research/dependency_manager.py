@@ -1,13 +1,13 @@
-"""
-Dependency management for optional search providers.
+"""Dependency management for optional search providers.
+
 This module handles optional imports and provides clear guidance when dependencies are missing.
 """
 
 import logging
-from typing import Dict, List, Optional, Set, Any, Callable
+import os
 from dataclasses import dataclass
 from enum import Enum
-import os
+from typing import Any, Dict, List, Set
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,13 @@ class DependencyError(Exception):
 class ProviderNotInstalledError(DependencyError):
     """Raised when a search provider is not installed."""
     def __init__(self, provider: str, install_command: str, description: str):
+        """Initialize ProviderNotInstalledError with installation details.
+        
+        Args:
+            provider: Name of the search provider
+            install_command: Command to install the provider
+            description: Description of the provider's functionality
+        """
         self.provider = provider
         self.install_command = install_command
         self.description = description
@@ -35,6 +42,13 @@ class ProviderNotInstalledError(DependencyError):
 class ProviderConfigurationError(DependencyError):
     """Raised when a provider is installed but not properly configured."""
     def __init__(self, provider: str, missing_config: List[str], help_text: str = ""):
+        """Initialize ProviderConfigurationError with configuration details.
+        
+        Args:
+            provider: Name of the search provider
+            missing_config: List of missing configuration parameters
+            help_text: Additional help text for configuration
+        """
         self.provider = provider
         self.missing_config = missing_config
         super().__init__(
@@ -61,9 +75,9 @@ class SearchProvider(str, Enum):
 class HealthStatus:
     """Health status of a provider."""
     healthy: bool
-    error: Optional[str] = None
-    details: Optional[str] = None
-    fix_command: Optional[str] = None
+    error: str | None = None
+    details: str | None = None
+    fix_command: str | None = None
 
 @dataclass
 class DependencyInfo:
@@ -73,22 +87,22 @@ class DependencyInfo:
     pip_install: str
     description: str
     is_available: bool = False
-    import_error: Optional[str] = None
-    required_env_vars: Optional[List[str]] = None  # New field for API key requirements
+    import_error: str | None = None
+    required_env_vars: List[str] | None = None  # New field for API key requirements
 
 
 class DependencyManager:
     """Manages optional dependencies for search providers."""
     
     def __init__(self):
+        """Initialize DependencyManager and check provider availability."""
         self._available_providers: Set[SearchProvider] = set()
         self._dependency_info: Dict[SearchProvider, DependencyInfo] = {}
-        self._imports_cache: Dict[str, any] = {}
+        self._imports_cache: Dict[str, Any] = {}
         self._initialize_dependencies()
     
     def _initialize_dependencies(self):
         """Initialize dependency information and check availability."""
-        
         # Define dependency information
         dependencies = {
             SearchProvider.DUCKDUCKGO: DependencyInfo(
@@ -203,7 +217,7 @@ class DependencyManager:
         """Get list of unavailable search providers."""
         return [p for p in SearchProvider if p not in self._available_providers]
     
-    def get_provider_info(self, provider: SearchProvider) -> Optional[DependencyInfo]:
+    def get_provider_info(self, provider: SearchProvider) -> DependencyInfo | None:
         """Get information about a specific provider."""
         return self._dependency_info.get(provider)
     

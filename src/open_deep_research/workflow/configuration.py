@@ -1,8 +1,15 @@
-from open_deep_research.configuration import DEFAULT_REPORT_STRUCTURE, SearchAPI
-from dataclasses import dataclass, fields
-from typing import Optional, Dict, Any, Literal
-from langchain_core.runnables import RunnableConfig
+"""Workflow-specific configuration for Open Deep Research.
+
+This module provides configuration classes and utilities specifically for the
+workflow-based research pipeline implementation.
+"""
 import os
+from dataclasses import dataclass, fields
+from typing import Any, Dict, Literal
+
+from langchain_core.runnables import RunnableConfig
+
+from open_deep_research.configuration import DEFAULT_REPORT_STRUCTURE, SearchAPI
 
 
 @dataclass(kw_only=True)
@@ -11,28 +18,28 @@ class WorkflowConfiguration:
     # Common configuration
     report_structure: str = DEFAULT_REPORT_STRUCTURE
     search_api: SearchAPI = SearchAPI.TAVILY
-    search_api_config: Optional[Dict[str, Any]] = None
+    search_api_config: Dict[str, Any] | None = None
     clarify_with_user: bool = False
     sections_user_approval: bool = False
     process_search_results: Literal["summarize", "split_and_rerank"] | None = "summarize"
     summarization_model_provider: str = "anthropic"
     summarization_model: str = "claude-3-5-haiku-latest"
     max_structured_output_retries: int = 3
-    include_source_str: bool = False
+    include_source_str: bool = True
     
     # Workflow-specific configuration
     number_of_queries: int = 2 # Number of search queries to generate per iteration
     max_search_depth: int = 2 # Maximum number of reflection + search iterations
     planner_provider: str = "anthropic"
     planner_model: str = "claude-3-7-sonnet-latest"
-    planner_model_kwargs: Optional[Dict[str, Any]] = None
+    planner_model_kwargs: Dict[str, Any] | None = None
     writer_provider: str = "anthropic"
     writer_model: str = "claude-3-7-sonnet-latest"
-    writer_model_kwargs: Optional[Dict[str, Any]] = None
+    writer_model_kwargs: Dict[str, Any] | None = None
 
     @classmethod
     def from_runnable_config(
-        cls, config: Optional[RunnableConfig] = None
+        cls, config: RunnableConfig | None = None
     ) -> "WorkflowConfiguration":
         """Create a WorkflowConfiguration instance from a RunnableConfig."""
         configurable = (

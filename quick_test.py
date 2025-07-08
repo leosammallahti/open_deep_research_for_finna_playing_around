@@ -1,32 +1,25 @@
 #!/usr/bin/env python3
-"""
-Quick test of the improved MVP with real API keys.
-"""
+"""Quick test of the improved MVP with real API keys."""
 import asyncio
 import sys
-import os
 from pathlib import Path
 
 # Load environment variables
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from open_deep_research.graph import graph
 from open_deep_research.configuration import SearchAPI
+from open_deep_research.graph import graph
+from open_deep_research.core.model_utils import trace_config
+
 
 async def quick_mvp_test():
     """Quick test of the improved MVP."""
-    
-    print("🔍 Testing Your Improved MVP")
-    print("=" * 50)
-    
     # Test 1: Tavily search with Anthropic models (your default config)
-    print("\n✨ Testing with your API keys:")
-    print("   - Search: Tavily")
-    print("   - Models: Claude 3.5 Sonnet")
     
     config = {
         "configurable": {
@@ -41,26 +34,19 @@ async def quick_mvp_test():
     }
     
     try:
-        print("\n🚀 Running research on 'Benefits of AI in education'...")
         result = await graph.ainvoke(
             {"topic": "Benefits of AI in education"}, 
-            config=config
+            config={**config, **trace_config("quick-test-1")}
         )
         
-        print("✅ SUCCESS! Your MVP is working!")
-        print(f"📝 Generated {len(result.get('sections', []))} sections")
         
         if 'final_report' in result:
-            report_preview = result['final_report'][:200] + "..." if len(result['final_report']) > 200 else result['final_report']
-            print(f"\n📄 Report preview:\n{report_preview}")
+            result['final_report'][:200] + "..." if len(result['final_report']) > 200 else result['final_report']
             
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        print("💡 Make sure you've created the .env file with your API keys")
+    except Exception:
+        pass
     
     # Test 2: DeepSeek integration (now fixed!)
-    print("\n" + "-" * 50)
-    print("🧠 Testing DeepSeek integration (refactored)...")
     
     deepseek_config = {
         "configurable": {
@@ -77,18 +63,12 @@ async def quick_mvp_test():
     try:
         result = await graph.ainvoke(
             {"topic": "Future of renewable energy"}, 
-            config=deepseek_config
+            config={**deepseek_config, **trace_config("quick-test-2")}
         )
-        print("✅ DeepSeek test: SUCCESS!")
-        print("🎉 No more tool_choice errors!")
         
-    except Exception as e:
-        print(f"⚠️  DeepSeek test: {e}")
+    except Exception:
+        pass
     
-    print("\n" + "=" * 50)
-    print("🎉 MVP Test Complete!")
-    print("\n🚀 Your Streamlit app should be running at: http://localhost:8501")
-    print("   Try it out with different models and search providers!")
 
 if __name__ == "__main__":
     asyncio.run(quick_mvp_test()) 

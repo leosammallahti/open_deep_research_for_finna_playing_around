@@ -1,10 +1,15 @@
 from typing import cast
 
-from pydantic import BaseModel, Field
 from langchain_anthropic import ChatAnthropic
+from pydantic import BaseModel, Field
 
 from open_deep_research.utils import get_today_str
-from tests.evals.prompts import RELEVANCE_PROMPT, STRUCTURE_PROMPT, GROUNDEDNESS_PROMPT, OVERALL_QUALITY_PROMPT
+from tests.evals.prompts import (
+    GROUNDEDNESS_PROMPT,
+    OVERALL_QUALITY_PROMPT,
+    RELEVANCE_PROMPT,
+    STRUCTURE_PROMPT,
+)
 
 eval_model = ChatAnthropic(
     model="claude-sonnet-4-0",

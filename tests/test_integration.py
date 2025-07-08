@@ -3,19 +3,17 @@ Comprehensive integration tests for Open Deep Research.
 These tests ensure the full workflow works with different model/search combinations.
 """
 
-import pytest
 import asyncio
 import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any, Dict
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from open_deep_research.graph import graph
 from open_deep_research.configuration import SearchAPI
-
+from open_deep_research.graph import graph
 
 # Test configurations that should work
 WORKING_CONFIGURATIONS = [
@@ -81,10 +79,6 @@ class IntegrationTestRunner:
     async def test_configuration(self, name: str, config: Dict[str, Any], 
                                 expected_error: str = None) -> Dict[str, Any]:
         """Test a single configuration."""
-        print(f"\n{'='*60}")
-        print(f"Testing: {name}")
-        print(f"Config: {config}")
-        print(f"{'='*60}")
         
         result = {
             "name": name,
@@ -112,15 +106,12 @@ class IntegrationTestRunner:
                 if "final_report" in output and output["final_report"]:
                     result["status"] = "passed"
                     result["output"] = output["final_report"][:200] + "..."
-                    print(f"✅ PASSED: Generated report in {result['duration']:.2f}s")
                 else:
                     result["status"] = "failed"
                     result["error"] = "No final report generated"
-                    print(f"❌ FAILED: No final report in output")
             else:
                 result["status"] = "failed"
                 result["error"] = f"Invalid output type: {type(output)}"
-                print(f"❌ FAILED: {result['error']}")
                 
         except Exception as e:
             result["status"] = "failed"
@@ -129,21 +120,16 @@ class IntegrationTestRunner:
             
             # Check if this is an expected error
             if expected_error and expected_error in str(e):
-                print(f"⚠️  EXPECTED ERROR: {expected_error}")
                 result["status"] = "expected_failure"
             else:
-                print(f"❌ FAILED: {str(e)[:200]}")
+                pass
         
         return result
     
     async def run_all_tests(self):
         """Run all integration tests."""
-        print("\n" + "="*80)
-        print("INTEGRATION TEST SUITE")
-        print("="*80)
         
         # Test working configurations
-        print("\n## Testing Working Configurations")
         for config in WORKING_CONFIGURATIONS:
             result = await self.test_configuration(
                 config["name"], 
@@ -158,7 +144,6 @@ class IntegrationTestRunner:
                 self.results["failed"].append(result)
         
         # Test problematic configurations
-        print("\n## Testing Known Problematic Configurations")
         for config in PROBLEMATIC_CONFIGURATIONS:
             result = await self.test_configuration(
                 config["name"],
@@ -179,28 +164,17 @@ class IntegrationTestRunner:
     
     def generate_report(self):
         """Generate a test report."""
-        print("\n" + "="*80)
-        print("TEST RESULTS SUMMARY")
-        print("="*80)
         
-        total = len(self.results["passed"]) + len(self.results["failed"]) + len(self.results["skipped"])
+        len(self.results["passed"]) + len(self.results["failed"]) + len(self.results["skipped"])
         
-        print(f"\nTotal Tests: {total}")
-        print(f"✅ Passed: {len(self.results['passed'])}")
-        print(f"❌ Failed: {len(self.results['failed'])}")
-        print(f"⏭️  Skipped: {len(self.results['skipped'])}")
         
         if self.results["failed"]:
-            print("\n## Failed Tests:")
             for test in self.results["failed"]:
-                print(f"\n- {test['name']}")
-                print(f"  Error: {test['error']}")
-                print(f"  Config: {test['config']}")
+                pass
         
         if self.results["skipped"]:
-            print("\n## Skipped Tests (Already Fixed):")
             for test in self.results["skipped"]:
-                print(f"- {test['name']}")
+                pass
         
         # Save results
         self.save_results()
@@ -226,19 +200,16 @@ class IntegrationTestRunner:
         with open(results_file, 'w') as f:
             json.dump(data, f, indent=2)
         
-        print(f"\n📄 Results saved to: {results_file}")
 
 
 def test_message_handling():
     """Test message handling with different formats."""
     from open_deep_research.utils import get_message_content
     
-    print("\n## Testing Message Handling")
     
     # Test dict format
     dict_msg = {"content": "Test content", "role": "user"}
     assert get_message_content(dict_msg) == "Test content"
-    print("✅ Dict message handling works")
     
     # Test object format (mock)
     class MockMessage:
@@ -247,24 +218,20 @@ def test_message_handling():
     
     obj_msg = MockMessage("Test content")
     assert get_message_content(obj_msg) == "Test content"
-    print("✅ Object message handling works")
     
     # Test invalid format
     try:
         get_message_content("invalid")
-        print("❌ Invalid message handling failed to raise error")
     except TypeError:
-        print("✅ Invalid message handling raises proper error")
+        pass
 
 
 async def main():
     """Run all tests."""
     # First run unit tests
-    print("Running unit tests...")
     test_message_handling()
     
     # Then run integration tests
-    print("\nRunning integration tests...")
     runner = IntegrationTestRunner()
     await runner.run_all_tests()
 
@@ -275,7 +242,6 @@ if __name__ == "__main__":
     missing_keys = [key for key in required_keys if not os.getenv(key)]
     
     if missing_keys:
-        print("⚠️  Warning: Missing API keys:", missing_keys)
-        print("   Some tests may fail. Add keys to .env file for full testing.")
+        pass
     
     asyncio.run(main()) 

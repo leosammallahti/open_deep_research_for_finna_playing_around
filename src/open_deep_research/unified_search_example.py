@@ -1,12 +1,12 @@
-"""
-Example implementation of a unified search interface for all providers.
+"""Example implementation of a unified search interface for all providers.
+
 This demonstrates how to create a consistent interface across different search providers.
 """
 
-from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
 import asyncio
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any, Dict, List
 
 from .dependency_manager import SearchProvider, validate_provider_or_raise
 
@@ -18,14 +18,19 @@ class SearchResult:
     url: str
     content: str
     score: float
-    raw_content: Optional[str] = None
-    provider: Optional[str] = None
+    raw_content: str | None = None
+    provider: str | None = None
 
 
 class SearchProviderBase(ABC):
     """Base class for all search providers."""
     
     def __init__(self, provider: SearchProvider):
+        """Initialize SearchProviderBase with a specific provider.
+        
+        Args:
+            provider: The search provider type to use
+        """
         self.provider = provider
         validate_provider_or_raise(provider)
     
@@ -74,6 +79,7 @@ class TavilySearchProvider(SearchProviderBase):
     """Tavily search provider implementation."""
     
     def __init__(self):
+        """Initialize TavilySearchProvider."""
         super().__init__(SearchProvider.TAVILY)
     
     async def search(self, queries: List[str], **kwargs) -> List[SearchResult]:
@@ -106,9 +112,11 @@ class TavilySearchProvider(SearchProviderBase):
         return results
     
     def get_required_params(self) -> List[str]:
+        """Get list of required parameters for Tavily search provider."""
         return []  # No required params beyond queries
     
     def get_optional_params(self) -> Dict[str, Any]:
+        """Get optional parameters with their defaults for Tavily search provider."""
         return {
             'max_results': 5,
             'topic': 'general',
@@ -120,6 +128,7 @@ class DuckDuckGoSearchProvider(SearchProviderBase):
     """DuckDuckGo search provider implementation."""
     
     def __init__(self):
+        """Initialize DuckDuckGoSearchProvider."""
         super().__init__(SearchProvider.DUCKDUCKGO)
     
     async def search(self, queries: List[str], **kwargs) -> List[SearchResult]:
@@ -130,7 +139,7 @@ class DuckDuckGoSearchProvider(SearchProviderBase):
         results = []
         
         # Execute search
-        search_response = await duckduckgo_search.ainvoke({'search_queries': queries})
+        await duckduckgo_search.ainvoke({'search_queries': queries})
         
         # Parse the formatted string response
         # In a real implementation, we would modify duckduckgo_search to return structured data
@@ -148,9 +157,11 @@ class DuckDuckGoSearchProvider(SearchProviderBase):
         return results
     
     def get_required_params(self) -> List[str]:
+        """Get list of required parameters for DuckDuckGo search provider."""
         return []
     
     def get_optional_params(self) -> Dict[str, Any]:
+        """Get optional parameters with their defaults for DuckDuckGo search provider."""
         return {}
 
 
@@ -158,6 +169,7 @@ class UnifiedSearchInterface:
     """Unified interface for all search providers."""
     
     def __init__(self):
+        """Initialize UnifiedSearchInterface with available providers."""
         self.providers = {
             SearchProvider.TAVILY: TavilySearchProvider,
             SearchProvider.DUCKDUCKGO: DuckDuckGoSearchProvider,
@@ -190,7 +202,7 @@ class UnifiedSearchInterface:
 
 # Example usage
 async def example_unified_search():
-    """Example of using the unified search interface."""
+    """Demonstrate usage of the unified search interface."""
     unified_search = UnifiedSearchInterface()
     
     # Search with Tavily
@@ -203,9 +215,9 @@ async def example_unified_search():
         )
         
         for result in tavily_results:
-            print(f"[{result.provider}] {result.title}: {result.url}")
-    except Exception as e:
-        print(f"Tavily search failed: {e}")
+            pass
+    except Exception:
+        pass
     
     # Search with DuckDuckGo
     try:
@@ -215,9 +227,9 @@ async def example_unified_search():
         )
         
         for result in ddg_results:
-            print(f"[{result.provider}] {result.title}: {result.url}")
-    except Exception as e:
-        print(f"DuckDuckGo search failed: {e}")
+            pass
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

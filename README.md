@@ -129,7 +129,9 @@ See [src/open_deep_research/graph.ipynb](src/open_deep_research/graph.ipynb) and
 
 ## Open Deep Research Implementations
 
-Open Deep Research features two distinct implementation approaches, each with its own strengths:
+Open Deep Research provides three different implementations for generating research reports. See the [Implementation Guide](IMPLEMENTATION_GUIDE.md) for detailed guidance on choosing the right implementation for your needs.
+
+### Quick Overview
 
 ## 1. Graph-based Workflow Implementation (`src/open_deep_research/graph.py`)
 

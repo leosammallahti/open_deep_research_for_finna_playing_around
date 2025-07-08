@@ -1,64 +1,79 @@
-from typing import Literal, Union
-import json
-import asyncio
-import re
+"""LangGraph workflow implementation for Open Deep Research.
+
+This module defines the workflow nodes and graph for the LangGraph-based research pipeline,
+including report planning, section generation, web search, and content compilation.
+"""
+from typing import Literal, TypedDict
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
-from langchain_core.output_parsers import PydanticOutputParser
-
-from langgraph.graph import START, END, StateGraph
-from langgraph.types import Send, interrupt, Command
-from langgraph.store.memory import InMemoryStore
-
-from open_deep_research.pydantic_state import (
-    DeepResearchState,
-    Sections,
-    Queries,
-    Feedback,
-    SectionOutput
-)
-
-from open_deep_research.prompts import (
-    report_planner_query_writer_instructions,
-    report_planner_instructions,
-    query_writer_instructions, 
-    section_writer_instructions,
-    final_section_writer_instructions,
-    section_grader_instructions,
-    section_writer_inputs
-)
+from langgraph.graph import END, START, StateGraph
+from langgraph.types import Command, Send
 
 from open_deep_research.configuration import WorkflowConfiguration
-from open_deep_research.utils import (
-    deduplicate_and_format_sources, 
-    get_config_value, 
-    get_search_params, 
-    select_and_execute_search,
-    get_today_str,
-    get_structured_output_with_fallback,
-    filter_think_tokens,
-    format_sections,
-    format_sections_for_final_report,
-    format_sections_for_context,
-    summarize_search_results
+from open_deep_research.core import (
+    extract_configuration,
+    extract_unique_urls,
+    format_sources_section,
+    get_search_api_params,
+    initialize_model,
 )
+from open_deep_research.prompts import (
+    final_section_writer_instructions,
+    query_writer_instructions,
+    report_planner_instructions,
+    section_grader_instructions,
+    section_writer_inputs,
+    section_writer_instructions,
+)
+from open_deep_research.pydantic_state import (
+    DeepResearchState,
+    Feedback,
+    Queries,
+    Section,
+    SectionOutput,
+    Sections,
+)
+from open_deep_research.utils import (
+    filter_think_tokens,
+    format_sections_for_context,
+    format_sections_for_final_report,
+    get_config_value,
+    get_structured_output_with_fallback,
+    get_today_str,
+    select_and_execute_search,
+    summarize_search_results,
+)
+import operator
+from open_deep_research.core.logging_utils import get_logger
+
+logger = get_logger(__name__)
+
+
+class SectionResearchState(TypedDict):
+    """State for the section research sub-graph."""
+    topic: str
+    section: Section
+    search_queries: list[str]
+    source_str: str
+    search_iterations: int
+
 
 ## Nodes -- 
 
 async def generate_report_plan(state: DeepResearchState, config: RunnableConfig):
     """Generate a report plan with sections and research queries."""
-    configurable = WorkflowConfiguration.from_runnable_config(config)
+    configurable = extract_configuration(config, WorkflowConfiguration)
     topic = state.topic
     feedback = " ".join(state.feedback or [])
     
     # 1. Get the planner model
     planner_provider, planner_model_name, planner_model_id = configurable.get_model_for_role("planner")
-    planner_llm = init_chat_model(
-        model=planner_model_name, 
-        model_provider=planner_provider,
-        model_kwargs=configurable.planner_model_kwargs or {}
+    planner_llm = initialize_model(
+        planner_provider,
+        planner_model_name,
+        configurable.planner_model_kwargs
     )
 
     # 2. Generate the report sections
@@ -87,11 +102,12 @@ async def human_feedback(state: DeepResearchState):
     # For now, we automatically proceed to the research phase
     return {}
 
-async def generate_queries(state: DeepResearchState, config: RunnableConfig):
+async def generate_queries(state: SectionResearchState, config: RunnableConfig):
     """Generate search queries for researching a specific section."""
     configurable = WorkflowConfiguration.from_runnable_config(config)
-    topic = state.topic
-    section = state.section
+    # Use dictionary key access for all state variables
+    topic = state["topic"]
+    section = state["section"]
 
     # 1. Get the writer model (or a dedicated query model if specified)
     writer_provider, writer_model_name, writer_model_id = configurable.get_model_for_role("writer")
@@ -116,16 +132,20 @@ async def generate_queries(state: DeepResearchState, config: RunnableConfig):
         model_id=writer_model_id
     )
 
-    return {"search_queries": queries.queries}
+    return {
+        "search_queries": [q.search_query for q in queries.queries],
+        "section": section
+    }
 
-async def search_web(state: DeepResearchState, config: RunnableConfig):
+async def search_web(state: SectionResearchState, config: RunnableConfig):
     """Perform a web search for the generated queries."""
-    configurable = WorkflowConfiguration.from_runnable_config(config)
-    search_api = get_config_value(configurable.search_api)
-    search_api_config = configurable.search_api_config or {}
-    params_to_pass = get_search_params(search_api, search_api_config)
+    configurable = extract_configuration(config, WorkflowConfiguration)
+    params_to_pass = get_search_api_params(configurable)
+    search_api_val = get_config_value(configurable.search_api)
+    search_api = str(search_api_val) if search_api_val is not None else "none"
     
-    query_list = [q.search_query for q in state.search_queries]
+    # Use dictionary key access for all state variables
+    query_list = [q for q in state.get("search_queries", [])]
     
     source_str = await select_and_execute_search(
         search_api, 
@@ -133,14 +153,20 @@ async def search_web(state: DeepResearchState, config: RunnableConfig):
         params_to_pass
     )
     
-    return {"source_str": source_str}
+    return {
+        "source_str": source_str,
+        "section": state["section"],
+        "search_queries": state.get("search_queries", [])
+    }
 
-async def write_section(state: DeepResearchState, config: RunnableConfig) -> Command[Literal[END, "search_web"]]:
+async def write_section(state: SectionResearchState, config: RunnableConfig):
     """Write a section of the report based on search results and reflect on it."""
     configurable = WorkflowConfiguration.from_runnable_config(config)
-    topic = state.topic
-    section = state.section
-    source_str = state.source_str
+    # Use dictionary key access for all state variables
+    topic = state["topic"]
+    section = state["section"]
+    source_str = state.get("source_str", "")
+    search_iterations = state.get("search_iterations", 0)
 
     # 1. Get the writer model
     writer_provider, writer_model_name, writer_model_id = configurable.get_model_for_role("writer")
@@ -151,7 +177,7 @@ async def write_section(state: DeepResearchState, config: RunnableConfig) -> Com
     )
 
     # 2. Truncate source_str if needed for models with limited context
-    if "gpt-3.5-turbo" in writer_model_id.lower():
+    if writer_model_id and "gpt-3.5-turbo" in writer_model_id.lower():
         # Limit source content for GPT-3.5-turbo to prevent context errors
         source_str = await summarize_search_results(source_str, max_tokens=6000, model=writer_model_id)
 
@@ -198,38 +224,24 @@ async def write_section(state: DeepResearchState, config: RunnableConfig) -> Com
     )
 
     # 6. Decide whether to finish or iterate
-    if feedback.grade == "pass" or state.search_iterations >= configurable.max_search_depth:
-        # Before finishing, find the original section to ensure all data is preserved
-        original_section = next((s for s in state.initial_sections if s.name == section.name), None)
-        if original_section:
-            original_section.content = section.content
-            update = {"completed_sections": [original_section]}
-        else:
-            # Fallback if the section can't be found (should not happen in normal flow)
-            update = {"completed_sections": [section]}
-
+    # If the section is passing or the max search depth is reached, publish the section to completed sections 
+    if feedback.grade == "pass" or search_iterations >= configurable.max_search_depth:
+        # Create a dictionary with only the fields that need to be accumulated.
+        update = {"completed_sections": [section]}
         if configurable.include_source_str:
-            update["sources"] = [source_str]
-        return Command(update=update, goto=END)
-    else:
-        # Ensure the full section object is passed on, not just the name
-        original_section = next((s for s in state.initial_sections if s.name == section.name), None)
-        if original_section:
-            section_to_pass = original_section
-            section_to_pass.content = section.content # carry over the latest content
-        else:
-            section_to_pass = section # fallback
+            update["source_str"] = source_str
 
+        # Return JUST the update dictionary. The sub-graph will end automatically.
+        return update
+
+    # If more research is needed, return a Command to continue the loop.
+    else:
         return Command(
-            update={
-                "search_queries": feedback.follow_up_queries, 
-                "section": section_to_pass,
-                "initial_sections": state.initial_sections
-            },
+            update={"search_queries": [q.search_query for q in feedback.follow_up_queries], "section": section},
             goto="search_web"
         )
     
-async def write_final_sections(state: DeepResearchState, config: RunnableConfig):
+async def write_final_sections(state: dict, config: RunnableConfig):
     """Write sections that don't require research using completed sections as context.
     
     This node handles sections like conclusions or summaries that build on
@@ -242,14 +254,13 @@ async def write_final_sections(state: DeepResearchState, config: RunnableConfig)
     Returns:
         Dict containing the newly written section
     """
-
     # Get configuration
     configurable = WorkflowConfiguration.from_runnable_config(config)
 
-    # Get state 
-    topic = state.topic
-    section = state.section
-    completed_report_sections = state.report_sections_from_research
+    # Use dictionary key access for all state variables
+    topic = state["topic"]
+    section = state["section"]
+    completed_report_sections = state["report_sections_from_research"]
     
     # Format system instructions
     system_instructions = final_section_writer_instructions.format(topic=topic, section_name=section.name, section_topic=section.description, context=completed_report_sections)
@@ -266,12 +277,12 @@ async def write_final_sections(state: DeepResearchState, config: RunnableConfig)
     # Write content to section 
     section.content = section_content.content
 
-    # Write the updated section to completed sections
+    # Only return the fields that should be accumulated
     return {"completed_sections": [section]}
 
 def gather_completed_sections(state: DeepResearchState):
     """Gather all completed sections and format them for the final report."""
-    completed_sections = state.get("completed_sections", [])
+    completed_sections = state.completed_sections
     
     # Format the sections into a string for context
     formatted_str = format_sections_for_context(completed_sections)
@@ -280,16 +291,16 @@ def gather_completed_sections(state: DeepResearchState):
 
 async def compile_final_report(state: DeepResearchState, config: RunnableConfig):
     """Compile the final report from all completed sections."""
-    configurable = WorkflowConfiguration.from_runnable_config(config)
+    configurable = extract_configuration(config, WorkflowConfiguration)
     
     # Sort sections by their original planned order
-    section_order = [s.name for s in state['sections']]
+    section_order = [s.name for s in state.sections]
     
     # Use a dictionary for quick lookup and update
-    completed_sections_map = {s.name: s for s in state['completed_sections']}
+    completed_sections_map = {s.name: s for s in state.completed_sections}
 
     # Ensure all sections are present, using original if completion is missing
-    final_sections = [completed_sections_map.get(name, next((s for s in state['sections'] if s.name == name), None)) for name in section_order]
+    final_sections = [completed_sections_map.get(name, next((s for s in state.sections if s.name == name), None)) for name in section_order]
     
     # Filter out any None values in case a section is missing entirely
     final_sections = [s for s in final_sections if s is not None]
@@ -298,30 +309,24 @@ async def compile_final_report(state: DeepResearchState, config: RunnableConfig)
     report_body = format_sections_for_final_report(final_sections)
     
     # Add sources if requested
-    if configurable.include_source_str and state.get("sources"):
-        # Extract unique URLs from all source strings
-        all_urls = []
-        url_pattern = r'URL:\s*(https?://[^\s\n]+)'
-        
-        for source_str in state["sources"]:
-            urls = re.findall(url_pattern, source_str)
-            all_urls.extend(urls)
-        
-        # Deduplicate while preserving order
-        seen = set()
-        unique_urls = []
-        for url in all_urls:
-            if url not in seen:
-                seen.add(url)
-                unique_urls.append(url)
-        
-        # Format sources with numbers
-        if unique_urls:
-            sources_section = "\n\n---\n\n## Sources\n\n"
-            for i, url in enumerate(unique_urls, 1):
-                sources_section += f"[{i}] {url}\n"
-            report_body += sources_section
-        
+    if configurable.include_source_str:
+        # The source_str field accumulates all sources from parallel sub-graphs
+        # due to the Annotated[str, operator.add] in the state definition
+        all_source_str = state.source_str
+        if all_source_str:
+            # Use shared utility for URL extraction and formatting
+            unique_urls = extract_unique_urls(all_source_str)
+            sources_section = format_sources_section(unique_urls)
+            if sources_section:
+                report_body += sources_section
+                logger.debug("Added sources section with %d URLs", len(unique_urls))
+            else:
+                logger.debug("Sources section was empty even though we have %d URLs", len(unique_urls))
+        else:
+            logger.debug("No source_str collected from any sections")
+    else:
+        logger.debug("Sources not included because include_source_str is False")
+    
     return {"final_report": report_body}
 
 def initiate_final_section_writing(state: DeepResearchState):
@@ -336,10 +341,12 @@ def initiate_final_section_writing(state: DeepResearchState):
     Returns:
         List of Send commands for parallel section writing
     """
-
     # Kick off section writing in parallel via Send() API for any sections that do not require research
     return [
-        Send("write_final_sections", {"topic": state.topic, "section": s, "report_sections_from_research": state.report_sections_from_research}) 
+        Send("write_final_sections", {
+            "section": s, 
+            "report_sections_from_research": state.report_sections_from_research
+        })
         for s in state.sections 
         if not s.research
     ]
@@ -347,7 +354,11 @@ def initiate_final_section_writing(state: DeepResearchState):
 def initiate_section_research(state: DeepResearchState):
     """Create parallel tasks for researching sections that require research."""
     return [
-        Send("build_section_with_web_research", {"topic": state.topic, "section": s, "search_iterations": 0, "initial_sections": state.sections})
+        Send("build_section_with_web_research", {
+            "section": s, 
+            "search_iterations": 0, 
+            "initial_sections": state.sections
+        })
         for s in state.sections
         if s.research
     ]
@@ -355,7 +366,7 @@ def initiate_section_research(state: DeepResearchState):
 # Report section sub-graph -- 
 
 # Add nodes 
-section_builder = StateGraph(DeepResearchState, output=SectionOutput)
+section_builder = StateGraph(SectionResearchState)
 section_builder.add_node("generate_queries", generate_queries)
 section_builder.add_node("search_web", search_web)
 section_builder.add_node("write_section", write_section)
@@ -365,13 +376,15 @@ section_builder.add_edge(START, "generate_queries")
 section_builder.add_edge("generate_queries", "search_web")
 section_builder.add_edge("search_web", "write_section")
 
+section_builder.add_edge("write_section", END)
+
 # Outer graph for initial report plan compiling results from each section -- 
 
 # Add nodes
-builder = StateGraph(DeepResearchState, input=DeepResearchState, output=DeepResearchState, config_schema=WorkflowConfiguration)
+builder = StateGraph(DeepResearchState, config_schema=WorkflowConfiguration)
 builder.add_node("generate_report_plan", generate_report_plan)
 builder.add_node("human_feedback", human_feedback)
-builder.add_node("build_section_with_web_research", section_builder.compile())
+builder.add_node("build_section_with_web_research", section_builder.compile()) # type: ignore
 builder.add_node("gather_completed_sections", gather_completed_sections)
 builder.add_node("write_final_sections", write_final_sections)
 builder.add_node("compile_final_report", compile_final_report)
@@ -379,9 +392,9 @@ builder.add_node("compile_final_report", compile_final_report)
 # Add edges
 builder.add_edge(START, "generate_report_plan")
 builder.add_edge("generate_report_plan", "human_feedback")
-builder.add_conditional_edges("human_feedback", initiate_section_research, ["build_section_with_web_research"])
+builder.add_conditional_edges("human_feedback", initiate_section_research)
 builder.add_edge("build_section_with_web_research", "gather_completed_sections")
-builder.add_conditional_edges("gather_completed_sections", initiate_final_section_writing, ["write_final_sections"])
+builder.add_conditional_edges("gather_completed_sections", initiate_final_section_writing)
 builder.add_edge("write_final_sections", "compile_final_report")
 builder.add_edge("compile_final_report", END)
 

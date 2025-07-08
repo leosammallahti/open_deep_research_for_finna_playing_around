@@ -1,3 +1,9 @@
+"""Workflow-specific prompts for Open Deep Research.
+
+This module contains prompt templates specifically designed for the workflow-based
+research pipeline implementation.
+"""
+
 clarify_with_user_instructions="""
 These are the messages that have been exchanged so far from the user asking for the report:
 <Messages>
@@ -138,7 +144,7 @@ section_writer_instructions = """Write one section of a research report.
 - Strict 150-200 word limit
 - Use simple, clear language
 - Use short paragraphs (2-3 sentences max)
-- Use ## for section title (Markdown format)
+- DO NOT include the section title in your response - it will be added automatically
 - Do NOT ever refer to yourself as the writer of the report. This should be a professional report without any self-referential language. 
 - Do not say what you are doing in the report. Just write the report without any commentary from yourself.
 </Writing Guidelines>
@@ -152,7 +158,7 @@ section_writer_instructions = """Write one section of a research report.
 <Final Check>
 1. Verify that EVERY claim is grounded in the provided Source material
 2. Do NOT include a ### Sources section
-3. Only include the section title and content
+3. Only include the section content without the section title
 4. DO NOT include any commentary from yourself in the section. Just write the section. Do not say "I'm writing a section" or "I'll revise this section" or anything like that. Just include the report itself.
 </Final Check>
 """
@@ -236,20 +242,20 @@ These are the messages that have been exchanged so far from the user asking for 
 1. Section-Specific Approach:
 
 For Introduction:
-- Use # for report title (Markdown format)
 - 50-100 word limit
 - Write in simple and clear language
 - Focus on the core motivation for the report in 1-2 paragraphs
-- Preview the specific content covered in the main body sections (mention key examples, case studies, or findings)
+- Directly present the content covered in the main body sections (mention key examples, case studies, or findings) without meta-commentary like "This report previews" or "The following sections will cover"
 - Use a clear narrative arc to introduce the report
 - Include NO structural elements (no lists or tables)
 - No sources section needed
+- DO NOT include the section title in your response - it will be added automatically
 
 For Conclusion/Summary:
-- Use ## for section title (Markdown format)
 - 100-150 word limit
-- Synthesize and tie together the key themes, findings, and insights from the main body sections
+- CRITICAL: Only summarize and synthesize information already presented in the main body sections - do NOT introduce new information, facts, or details that weren't covered earlier
 - Reference specific examples, case studies, or data points covered in the report
+- If the Key Findings section mentions multiple items (e.g., "top breeds include Labrador Retriever, German Shepherd, Golden Retriever, French Bulldog, and Beagle"), the conclusion must address ALL of them, not just a subset
 - For comparative reports:
     * Must include a focused comparison table using Markdown table syntax
     * Table should distill insights from the report
@@ -263,17 +269,20 @@ For Conclusion/Summary:
       - Ensure proper indentation and spacing
 - End with specific next steps or implications based on the report content
 - No sources section needed
+- DO NOT include the section title in your response - it will be added automatically
 
 3. Writing Approach:
 - Use concrete details over general statements
 - Make every word count
 - Focus on your single most important point
+- Ensure proper spacing between all words and punctuation
+- Proofread for typos, especially missing spaces between words
 </Task>
 
 <Quality Checks>
-- For introduction: 50-100 word limit, # for report title, no structural elements, no sources section
-- For conclusion: 100-150 word limit, ## for section title, only ONE structural element at most, no sources section
-- Markdown format
+- For introduction: 50-100 word limit, no structural elements, no sources section, no section title
+- For conclusion: 100-150 word limit, only ONE structural element at most, no sources section, no section title
+- Markdown format for any structural elements
 - Do not include word count or any preamble in your response
 - Do NOT ever refer to yourself as the writer of the report. This should be a professional report without any self-referential language.
 </Quality Checks>"""
