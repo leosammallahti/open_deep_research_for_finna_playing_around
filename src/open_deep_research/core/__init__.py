@@ -37,4 +37,4 @@ __all__ = [
     "format_prompt_with_context",
     "format_section_writer_inputs",
     "format_grader_instructions",
-] 
+]

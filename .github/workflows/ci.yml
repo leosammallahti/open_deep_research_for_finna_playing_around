@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ".[dev]"
+
+      - name: Run Ruff (format + lint)
+        run: |
+          ruff format --check .
+          ruff .
+
+      - name: Run MyPy
+        run: mypy src tests
+
+      - name: Run tests (fast mode)
+        env:
+          ODR_FAST_TEST: "1"
+        run: pytest -q 
+
+      - name: Check migration completeness
+        run: |
+          python - <<'PY'
+          from open_deep_research.migration import MigrationTracker
+
+          if not MigrationTracker.is_complete():
+              print("::warning::Some migrations are still pending – see details below")
+              for field, pct in MigrationTracker.status().items():
+                  print(f"{field}: {pct:.0f}% complete")
+              # Fail the build so unfinished migrations can't be merged unnoticed
+              raise SystemExit(1)
+          PY 

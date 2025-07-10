@@ -14,4 +14,4 @@ def test_get_search_params_filters_unknown_keys():
 
 def test_get_search_params_unknown_api_returns_empty():
     params = get_search_params("unknown_api", {"a": 1})
-    assert params == {} 
+    assert params == {}

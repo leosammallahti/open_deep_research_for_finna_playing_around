@@ -3,7 +3,8 @@
 This module contains all the prompt templates used throughout the research workflow,
 including instructions for report planning, query generation, section writing, and grading.
 """
-report_planner_query_writer_instructions="""You are performing research for a report. 
+
+report_planner_query_writer_instructions = """You are performing research for a report. 
 
 <Report topic>
 {topic}
@@ -31,7 +32,7 @@ Call the Queries tool
 Today is {today}
 """
 
-report_planner_instructions="""I want a plan for a report that is concise and focused.
+report_planner_instructions = """I want a plan for a report that is concise and focused.
 
 <Report topic>
 {topic}
@@ -72,7 +73,7 @@ Call the Sections tool
 </Format>
 """
 
-query_writer_instructions="""You are an expert technical writer crafting targeted web search queries that will gather comprehensive information for writing a technical report section.
+query_writer_instructions = """You are an expert technical writer crafting targeted web search queries that will gather comprehensive information for writing a technical report section.
 
 <Report topic>
 {topic}
@@ -132,7 +133,7 @@ section_writer_instructions = """Write one section of a research report.
 </Final Check>
 """
 
-section_writer_inputs=""" 
+section_writer_inputs = """ 
 <Report topic>
 {topic}
 </Report topic>
@@ -186,7 +187,7 @@ follow_up_queries: List[SearchQuery] = Field(
 </format>
 """
 
-final_section_writer_instructions="""You are an expert technical writer crafting a section that synthesizes information from the rest of the report.
+final_section_writer_instructions = """You are an expert technical writer crafting a section that synthesizes information from the rest of the report.
 
 <Report topic>
 {topic}
@@ -500,3 +501,14 @@ Example 2 (for a scientific article):
 ```
 
 Remember, your goal is to create a summary that can be easily understood and utilized by a downstream research agent while preserving the most critical information from the original webpage."""
+
+clarify_with_user_instructions = """
+These are the messages that have been exchanged so far from the user asking for the report:
+<Messages>
+{messages}
+</Messages>
+
+Return ONE targeted question to clarify report scope
+Focus on: technical depth, target audience, specific aspects to emphasize
+Examples: "Should I focus on technical implementation details or high-level business benefits?" 
+"""

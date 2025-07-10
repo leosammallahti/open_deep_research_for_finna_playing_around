@@ -22,8 +22,10 @@ def test_env_file_loading(tmp_path: Path, monkeypatch):
     settings_module = _reload_settings()
     settings = settings_module.settings
     if os.environ.get("TAVILY_API_KEY") and os.environ["TAVILY_API_KEY"] != "abc123":
-        pytest.skip("Environment already defines TAVILY_API_KEY – skipping overwrite test")
+        pytest.skip(
+            "Environment already defines TAVILY_API_KEY – skipping overwrite test"
+        )
     assert settings.tavily_api_key == "abc123"
     assert settings.log_level == "DEBUG"
     # Should also be injected into os.environ
-    assert os.environ["TAVILY_API_KEY"] == "abc123" 
+    assert os.environ["TAVILY_API_KEY"] == "abc123"
