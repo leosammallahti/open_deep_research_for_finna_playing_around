@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import importlib
 from functools import cache
-from typing import Callable, Dict, Any
+from typing import Any, Callable, Dict
 
 __all__ = ["LazyLoadError", "LazyNodeLoader"]
 
