@@ -82,6 +82,10 @@ lint.ignore = [
     "UP035",
     "D417",
     "E501",
+    # Legacy-code exclusions -------------------------------------------------
+    "D202",  # No blank lines allowed after function docstring
+    "D209",  # Multi-line docstring closing quotes on separate line
+    "T201",  # print statements in scripts & utils
 ]
 
 [tool.ruff.lint.per-file-ignores]
