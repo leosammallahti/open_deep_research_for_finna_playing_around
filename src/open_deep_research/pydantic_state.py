@@ -152,6 +152,8 @@ class DeepResearchState(BaseModel):
     This state uses proper reducers to handle concurrent updates from parallel nodes.
     """
 
+    # model_config removed to avoid duplication with Config
+
     # Core fields
     topic: Annotated[str, ReplaceFn] = Field(description="Research topic")
 
@@ -186,6 +188,7 @@ class DeepResearchState(BaseModel):
 
     class Config:
         # Allow extra fields for forward compatibility
+        frozen = True
         extra = "allow"
 
 
@@ -234,6 +237,8 @@ class SectionResearchState(BaseModel):
     This state is used within the parallel section research workflow.
     """
 
+    # model_config removed to avoid duplication with Config
+
     # Inherited from parent
     topic: Annotated[str, ReplaceFn] = Field(description="Research topic")
     credits_remaining: Annotated[Optional[int], MinFn] = Field(
@@ -264,6 +269,7 @@ class SectionResearchState(BaseModel):
     )
 
     class Config:
+        frozen = True
         extra = "allow"
 
 
@@ -280,4 +286,5 @@ class FinalSectionWritingState(BaseModel):
     current_section: Section = Field(description="Section to write (non-research)")
 
     class Config:
+        frozen = True
         extra = "allow"

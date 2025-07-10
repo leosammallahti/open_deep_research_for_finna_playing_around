@@ -8,6 +8,9 @@ import asyncio
 import os
 import sys
 from pathlib import Path
+import pytest
+
+pytestmark = pytest.mark.slow
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
@@ -121,6 +124,7 @@ def test_state_models():
         return False
 
 
+@pytest.mark.asyncio
 async def test_simple_graph():
     """Test a simple graph execution."""
     print("\n🧪 Testing Simple Graph Execution...")
