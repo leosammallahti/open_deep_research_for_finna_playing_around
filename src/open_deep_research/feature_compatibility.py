@@ -37,7 +37,6 @@ class FeatureCompatibility:
     @classmethod
     def validate_features(cls, features: Dict[str, bool]) -> List[str]:
         """Return a list of detected incompatibilities (empty if valid)."""
-
         active = [name for name, enabled in features.items() if enabled]
         errors: List[str] = []
 
@@ -56,7 +55,6 @@ class FeatureCompatibility:
     @classmethod
     def validate_mode(cls, mode: str, features: Dict[str, bool]) -> List[str]:
         """Validate that *features* are allowed under *mode*."""
-
         disallowed = cls.MODE_RESTRICTIONS.get(mode, [])
         return [
             f"Mode '{mode}' does not support '{f}'"
