@@ -10,10 +10,9 @@ from typing import Any, Dict, List, Mapping, TypeVar, Union, cast
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
-from langgraph.types import CachePolicy, Command, RetryPolicy, Send
+from langgraph.types import Command, RetryPolicy, Send
 
-# We purposely import the utils module itself so we can access functions that
-# might be monkey-patched during tests (e.g. ``select_and_execute_search``).
+# Third-party/local imports --------------------------------------------------
 import open_deep_research.utils as _odr_utils
 from open_deep_research.configuration import WorkflowConfiguration
 from open_deep_research.core import (
@@ -26,7 +25,6 @@ from open_deep_research.core import (
 from open_deep_research.core.config_utils import get_config_value
 from open_deep_research.core.format_utils import safe_context
 from open_deep_research.core.logging_utils import get_logger
-from open_deep_research.exceptions import OutOfBudgetError
 from open_deep_research.prompts import (
     final_section_writer_instructions,
     query_writer_instructions,
@@ -41,6 +39,7 @@ from open_deep_research.pydantic_state import (
     Queries,
     Section,
     SectionOutput,
+    SectionResearchState,
     Sections,
 )
 from open_deep_research.utils import (
@@ -89,13 +88,7 @@ def get_state_value(
     return cast("T | None", value)
 
 
-# Import the new Pydantic version of the state used by the section-level
-# sub-graph.  This unifies state handling under Pydantic models while we
-# incrementally remove legacy dict-style access.
-from open_deep_research.pydantic_state import (
-    SectionResearchState,
-    FinalSectionWritingState,
-)
+# Note: SectionResearchState imported above; legacy comment removed as part of lint cleanup.
 
 ## Nodes --
 
