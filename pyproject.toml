@@ -71,21 +71,13 @@ lint.select = [
     "E",    # pycodestyle
     "F",    # pyflakes
     "I",    # isort
-    "D",    # pydocstyle
-    "D401", # First line should be in imperative mood
-    "T201",
-    "UP",
 ]
 lint.ignore = [
-    "UP006",
-    "UP007",
-    "UP035",
-    "D417",
-    "E501",
-    # Legacy-code exclusions -------------------------------------------------
-    "D202",  # No blank lines allowed after function docstring
-    "D209",  # Multi-line docstring closing quotes on separate line
-    "T201",  # print statements in scripts & utils
+    "E501",  # line length
+    "E402",  # allow module-level imports below docstring
+    "F402",  # allow variable shadowing for imports
+    "F841",  # allow unused variables in some tests/examples
+    "E731",  # allow assignment of lambda expressions
 ]
 
 [tool.ruff.lint.per-file-ignores]
