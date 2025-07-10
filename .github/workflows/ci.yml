@@ -27,7 +27,7 @@ jobs:
       - name: Run Ruff (format + lint)
         run: |
           ruff format --check .
-          ruff .
+          ruff check .
 
       - name: Run MyPy
         run: mypy src tests
