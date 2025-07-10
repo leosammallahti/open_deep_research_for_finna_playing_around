@@ -132,7 +132,7 @@ class AppSettings(BaseSettings):
     # Public helper
     # ------------------------------------------------------------------
 
-    def validate_all(self) -> "AppSettings":
+    def validate_all(self) -> AppSettings:
         """Return self after triggering full model validation.
 
         The settings object is validated at construction time already.  This
@@ -140,9 +140,7 @@ class AppSettings(BaseSettings):
         call ``settings.validate_all()`` to make the intent explicit and to
         surface configuration errors before expensive network operations begin.
         """
-
         # ``model_validate`` will re-run validators; if it succeeds we simply
-        # return ``self`` ref to allow fluent usage.
         type(self).model_validate(self.model_dump())
         return self
 
