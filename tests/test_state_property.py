@@ -16,8 +16,8 @@ Run with::
 
 from __future__ import annotations
 
-# Guard: skip property-based tests in fast mode or when Hypothesis is unavailable
 import os
+
 import pytest
 from pydantic import ValidationError
 
