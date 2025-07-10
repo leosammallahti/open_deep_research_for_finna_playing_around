@@ -10,7 +10,7 @@ import warnings
 from typing import Any, Dict, List, cast
 
 from langchain.chat_models import init_chat_model
-from langchain_core.messages import AIMessage, BaseMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -360,14 +360,10 @@ async def supervisor_tools(state: ReportState, config: RunnableConfig):
 
         # Append to messages
         result.append(
-            cast(
-                "BaseMessage",
-                {
-                    "role": "tool",
-                    "content": str(observation),
-                    "name": tool_call["name"],
-                    "tool_call_id": tool_call["id"],
-                },
+            ToolMessage(
+                content=str(observation),
+                name=tool_call["name"],
+                tool_call_id=tool_call["id"],
             )
         )
 
@@ -519,12 +515,8 @@ async def research_agent(state: SectionState, config: RunnableConfig):
     raw_messages = list(state.messages)
     if not raw_messages:
         raw_messages = [
-            cast(
-                "BaseMessage",
-                {
-                    "role": "user",
-                    "content": f"Please research and write the section: {state.section}",
-                },
+            HumanMessage(
+                content=f"Please research and write the section: {state.section}"
             )
         ]
 
@@ -585,14 +577,10 @@ async def research_agent_tools(state: SectionState, config: RunnableConfig):
 
         # Append to messages
         result.append(
-            cast(
-                "BaseMessage",
-                {
-                    "role": "tool",
-                    "content": str(observation),
-                    "name": tool_call["name"],
-                    "tool_call_id": tool_call["id"],
-                },
+            ToolMessage(
+                content=str(observation),
+                name=tool_call["name"],
+                tool_call_id=tool_call["id"],
             )
         )
 
