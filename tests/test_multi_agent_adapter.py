@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import os
-
 import pytest
 
 from open_deep_research.node_adapter import NodeAdapter
 from open_deep_research.pydantic_state import DeepResearchState, Section
-
 
 # ---------------------------------------------------------------------------
 # Helpers

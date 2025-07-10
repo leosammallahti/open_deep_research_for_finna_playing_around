@@ -1,6 +1,6 @@
-from langsmith import traceable
-from langchain_openai import ChatOpenAI
 from langchain_core.tracers.langchain import wait_for_all_tracers
+from langchain_openai import ChatOpenAI
+from langsmith import traceable
 
 
 @traceable

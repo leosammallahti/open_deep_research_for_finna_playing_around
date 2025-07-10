@@ -1,9 +1,9 @@
-import pytest
 import os
 
-from open_deep_research.workflow.unified_workflow import unified_planner_graph
-from open_deep_research.pydantic_state import DeepResearchState
+import pytest
 
+from open_deep_research.pydantic_state import DeepResearchState
+from open_deep_research.workflow.unified_workflow import unified_planner_graph
 
 os.environ["ODR_FAST_TEST"] = "1"
 

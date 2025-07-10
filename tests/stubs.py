@@ -9,12 +9,11 @@ entire workflow can run inside pytest without hitting external APIs.
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-from typing import Any, Dict, List, cast
-
 import asyncio
 import json
 import re
+from types import SimpleNamespace
+from typing import Any, Dict, List, cast
 
 __all__ = ["FakeChatModel", "fake_search"]
 

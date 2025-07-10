@@ -97,8 +97,8 @@ def test_state_models():
     try:
         from open_deep_research.pydantic_state import (
             DeepResearchState,
-            SectionResearchState,
             Section,
+            SectionResearchState,
         )
 
         # Test DeepResearchState
@@ -126,8 +126,8 @@ async def test_simple_graph():
     print("\n🧪 Testing Simple Graph Execution...")
 
     try:
-        from open_deep_research.graph import graph
         from open_deep_research.configuration import SearchAPI
+        from open_deep_research.graph import graph
 
         # Simple test input
         test_input = {"topic": "What is Python programming?"}

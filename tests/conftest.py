@@ -43,10 +43,9 @@ import pytest
 def _offline_mode(monkeypatch):
     """Automatically patch heavy dependencies so tests run without tokens."""
 
-    from tests.stubs import FakeChatModel, fake_search  # local import to avoid hard dep
-
     # 1. Patch model initializer
     import open_deep_research.core.model_utils as _mu  # noqa: WPS433 – runtime patching
+    from tests.stubs import FakeChatModel, fake_search  # local import to avoid hard dep
 
     def _init_stub(provider: str, model_name: str, kwargs=None):  # noqa: D401
         role = "planner" if "planner" in model_name.lower() else "writer"

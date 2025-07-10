@@ -1,11 +1,12 @@
 import os
-import pytest
 from typing import cast
 
-from open_deep_research.workflow.unified_workflow import unified_planner_graph
-from open_deep_research.pydantic_state import DeepResearchState
-from open_deep_research.configuration import WorkflowConfiguration, SearchAPI
+import pytest
 from langchain_core.runnables import RunnableConfig
+
+from open_deep_research.configuration import SearchAPI, WorkflowConfiguration
+from open_deep_research.pydantic_state import DeepResearchState
+from open_deep_research.workflow.unified_workflow import unified_planner_graph
 
 
 @pytest.mark.asyncio

@@ -7,13 +7,12 @@ It compiles and can be called from tests to validate plumbing while we
 incrementally add more nodes.
 """
 
-from langgraph.graph import StateGraph, START, END
-from langchain_core.runnables import RunnableConfig
+from langgraph.graph import END, START, StateGraph
 
 from open_deep_research.pydantic_state import DeepResearchState
+from open_deep_research.workflow.unified_compiler import compile_report_unified
 from open_deep_research.workflow.unified_planner import unified_planner
 from open_deep_research.workflow.unified_researcher import unified_researcher
-from open_deep_research.workflow.unified_compiler import compile_report_unified
 
 __all__ = ["unified_planner_graph"]
 

@@ -12,7 +12,6 @@ import os
 import sys
 from collections import defaultdict
 
-
 # Configure a minimal logger – avoids Ruff ``T201`` print-statement warnings
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
