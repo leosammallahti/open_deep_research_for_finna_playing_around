@@ -1728,8 +1728,14 @@ def _create_fallback_instance(schema_class: type[BaseModel]) -> BaseModel:
                             "typing.List"
                         ):
                             defaults[field_name] = []
-                        elif field_type is dict:
+                        elif field_type is dict or str(field_type).startswith(
+                            "typing.Dict"
+                        ):
                             defaults[field_name] = {}
+                        else:
+                            # For unknown types, try to provide None if it's Optional
+                            if str(field_type).startswith("typing.Union") or str(field_type).startswith("typing.Optional"):
+                                defaults[field_name] = None
 
                 return schema_class(**defaults)
             except Exception:
@@ -1790,13 +1796,21 @@ async def get_structured_output_with_fallback(
         # If structured output fails, fall back to prompt-based parsing
 
         # Add JSON format instructions to the last message
-        parser = PydanticOutputParser(pydantic_object=schema_class)
+        parser: PydanticOutputParser[BaseModel] = PydanticOutputParser(pydantic_object=schema_class)
         format_instructions = parser.get_format_instructions()
 
         # Modify the last message to include format instructions
         modified_messages = messages.copy()
         if modified_messages and hasattr(modified_messages[-1], "content"):
-            modified_messages[-1].content += f"\n\n{format_instructions}"
+            # Ensure content is a string before concatenating
+            if isinstance(modified_messages[-1].content, str):
+                modified_messages[-1].content += f"\n\n{format_instructions}"
+            elif isinstance(modified_messages[-1].content, list):
+                # If content is a list, append the format instructions as a new element
+                modified_messages[-1].content.append(f"\n\n{format_instructions}")
+            else:
+                # Convert to string and concatenate
+                modified_messages[-1].content = str(modified_messages[-1].content) + f"\n\n{format_instructions}"
 
         # Get raw response
         raw_response = await model.ainvoke(modified_messages)
