@@ -47,4 +47,4 @@ class LazyNodeLoader:  # noqa: D101 – minimal stub
         except KeyError as exc:
             raise LazyLoadError(exc, f"Unknown node '{node_name}'") from exc
         except Exception as exc:  # noqa: BLE001 – propagate as LazyLoadError
-            raise LazyLoadError(exc, f"Failed to load node '{node_name}'") from exc 
+            raise LazyLoadError(exc, f"Failed to load node '{node_name}'") from exc
