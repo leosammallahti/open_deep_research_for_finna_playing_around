@@ -1,6 +1,21 @@
+# -*- coding: utf-8 -*-
+"""Utility script to detect duplicate filenames in the repository.
+
+Run as ``python scripts/check_duplicates.py``.  Exits with non-zero status
+if duplicates are found so it can be wired into CI pipelines.
+"""
+
+from __future__ import annotations
+
+import logging
 import os
 import sys
 from collections import defaultdict
+
+
+# Configure a minimal logger – avoids Ruff ``T201`` print-statement warnings
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
 
 
 def find_duplicates(root: str = ".") -> list[tuple[str, list[str]]]:
@@ -26,16 +41,18 @@ def find_duplicates(root: str = ".") -> list[tuple[str, list[str]]]:
 
 
 def main() -> None:  # noqa: D401
+    """Entry point for CLI execution."""
+
     duplicates = find_duplicates()
     if not duplicates:
-        print("✅ No duplicate filenames detected.")
+        logger.info("✅ No duplicate filenames detected.")
         return
 
-    print("❌ Duplicate filenames found:")
+    logger.error("❌ Duplicate filenames found:")
     for name, paths in duplicates:
-        print(f"  {name}:")
+        logger.error("  %s:", name)
         for p in paths:
-            print(f"    - {p}")
+            logger.error("    - %s", p)
     sys.exit(1)
 
 
