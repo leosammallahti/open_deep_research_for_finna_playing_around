@@ -1,5 +1,6 @@
+types-PyMySQL
 types-PyYAML
 types-cachetools
-types-pycurl
+types-pytz
 types-requests
 types-toml

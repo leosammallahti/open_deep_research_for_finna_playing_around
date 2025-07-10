@@ -773,11 +773,13 @@ builder.add_node("compile_final_report", compile_final_report)
 # Add edges
 builder.add_edge(START, "generate_report_plan")
 builder.add_edge("generate_report_plan", "human_feedback")
-builder.add_conditional_edges("human_feedback", initiate_section_research)  # type: ignore[arg-type]
+builder.add_conditional_edges(  # type: ignore[arg-type]
+    "human_feedback", initiate_section_research
+)
 builder.add_edge("build_section_with_web_research", "gather_completed_sections")
-builder.add_conditional_edges(
+builder.add_conditional_edges(  # type: ignore[arg-type]
     "gather_completed_sections", initiate_final_section_writing
-)  # type: ignore[arg-type]
+)
 builder.add_edge("write_final_sections", "compile_final_report")
 builder.add_edge("compile_final_report", END)
 
