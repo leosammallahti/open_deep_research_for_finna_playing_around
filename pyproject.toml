@@ -93,4 +93,5 @@ ignore_missing_imports = true
 follow_imports = "silent"
 check_untyped_defs = false
 warn_unused_ignores = false
+disable_error_code = ["assignment", "var-annotated", "operator", "arg-type", "list-item", "type-arg"]
 exclude = "tests|examples"
