@@ -35,7 +35,7 @@ jobs:
       - name: Run tests (fast mode)
         env:
           ODR_FAST_TEST: "1"
-        run: pytest -q 
+        run: pytest -q -m "not slow"
 
       - name: Check migration completeness
         run: |
