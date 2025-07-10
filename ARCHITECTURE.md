@@ -4,6 +4,14 @@
 
 Open Deep Research is a sophisticated research assistant with two distinct implementations:
 
+### **Unified Typed Workflow** (`src/open_deep_research/workflow/`)
+* **Pattern**: Single LangGraph with adapters; routes dynamically to *workflow* or *multi_agent* back-ends.
+* **State Management**: Immutable `DeepResearchState` (Pydantic) with reducer annotations for safe parallel updates.
+* **Adapter Layer**: `NodeAdapter` wraps legacy planner/researcher logic so existing code is reused without modification.
+* **Execution Modes**: Select by `execution_mode` field, `RunnableConfig.configurable.mode`, or enabling `features["mcp_support"]`.
+* **Feature Flags**: Parallel research, citation numbering, raw-source dump—all toggled via `WorkflowConfiguration.features`.
+* **Fast/Offline CI**: `ODR_FAST_TEST=1` stubs planner/researcher to avoid network calls.
+
 ### **Workflow Implementation** (`src/open_deep_research/graph.py`)
 - **Pattern**: Plan → Human Feedback → Execute → Compile
 - **State Management**: LangGraph StateGraph with structured state transitions
