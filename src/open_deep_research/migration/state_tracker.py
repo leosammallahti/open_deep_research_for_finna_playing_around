@@ -65,9 +65,9 @@ class MigrationTracker:
         "execution_mode": StateFieldMigration(
             field_name="execution_mode",
             added_date=datetime(2025, 1, 10),
-            unified_only=True,
-            nodes_updated={"unified_planner"},
-            nodes_pending={"workflow_researcher", "compile_report"},
+            unified_only=False,
+            nodes_updated={"unified_planner", "workflow_researcher", "compile_report"},
+            nodes_pending=set(),
         ),
     }
 
