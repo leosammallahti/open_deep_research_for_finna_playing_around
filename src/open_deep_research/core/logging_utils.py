@@ -48,7 +48,10 @@ def init_logger(level: str | int = "INFO", json: bool | None = None) -> None:  #
     # ---------------------------------------------------------------------
     if json is None:
         # Heuristic: if running in CI or env LOG_JSON=true we emit JSON.
-        json = bool(os.environ.get("CI")) or os.environ.get("LOG_JSON", "false").lower() == "true"
+        json = (
+            bool(os.environ.get("CI"))
+            or os.environ.get("LOG_JSON", "false").lower() == "true"
+        )
 
     # Map string levels to numeric constants provided by ``logging``.
     if isinstance(level, str):
@@ -112,7 +115,7 @@ def get_logger(name: str | None = None) -> structlog.BoundLogger:  # noqa: D401 
     if name:
         # Bind once so subsequent calls inherit the context.
         logger = logger.bind(logger_name=name)
-    return cast(structlog.BoundLogger, logger)
+    return cast("structlog.BoundLogger", logger)
 
 
 # Convenience: helper to inject a trace-id into the current context.
@@ -120,4 +123,21 @@ def set_trace_id(trace_id: str) -> None:
     """Attach *trace_id* to all subsequent log records on this context."""
     from structlog.contextvars import bind_contextvars
 
-    bind_contextvars(trace_id=trace_id) 
+    bind_contextvars(trace_id=trace_id)
+
+
+# Generic helper to bind arbitrary key-value pairs to the current log context
+# so they appear on every subsequent log call executed in the same async task
+# or thread.  Example::
+#
+#     bind_log_context(task="research", node="generate_queries")
+#     logger.info("starting")  # will include task=node fields
+
+
+def bind_log_context(**kwargs: str) -> None:  # noqa: D401
+    """Bind arbitrary logging context using structlog's contextvars backend."""
+
+    from structlog.contextvars import bind_contextvars
+
+    if kwargs:
+        bind_contextvars(**kwargs)

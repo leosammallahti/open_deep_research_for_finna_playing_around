@@ -1,5 +1,3 @@
-import pytest
-
 from open_deep_research.utils import deduplicate_and_format_sources, safe_get
 
 
@@ -11,6 +9,7 @@ class TestSafeGet:
     def test_object_access(self):
         class Obj:
             attr = "value"
+
         obj = Obj()
         assert safe_get(obj, "attr") == "value"
         assert safe_get(obj, "missing", "default") == "default"
@@ -29,8 +28,8 @@ class TestDeduplicateAndFormatSources:
         assert isinstance(result, str)
 
     def test_missing_fields(self):
-        result = deduplicate_and_format_sources([
-            {"results": [{"url": "http://test.com"}]}
-        ])
+        result = deduplicate_and_format_sources(
+            [{"results": [{"url": "http://test.com"}]}]
+        )
         assert "Untitled" in result
-        assert "http://test.com" in result 
+        assert "http://test.com" in result

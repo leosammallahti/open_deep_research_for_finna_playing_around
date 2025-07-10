@@ -312,6 +312,56 @@ thread = {"configurable": {"thread_id": str(uuid.uuid4()),
                            }}
 ```
 
+## 3. Unified Typed Workflow (`src/open_deep_research/workflow/`)
+
+**Status: Experimental – under active migration.**  This path unifies the
+graph-based and multi-agent approaches under one typed LangGraph powered by
+immutable `DeepResearchState`.
+
+Key points:
+
+* **Adapter Layer** – Existing planner/researcher logic is reused via
+  `NodeAdapter` wrappers so proven code continues to work.
+* **Execution Modes** – Select between *workflow* (legacy graph) and
+  *multi_agent* (supervisor-researcher) by either:
+  1. Setting `state.execution_mode = "multi_agent"` before invoking the
+     graph, **or**
+  2. Supplying `{"configurable": {"mode": "multi_agent"}}` in
+     `RunnableConfig`, **or**
+  3. Enabling `features["mcp_support"] = True` in `WorkflowConfiguration`.
+* **Fast/Offline CI** – When `ODR_FAST_TEST=1` the planner & researcher fall
+  back to synthetic stubs so the full test-suite runs without network calls
+  or model tokens.
+
+Example usage (Python):
+
+```python
+from open_deep_research.pydantic_state import DeepResearchState
+from open_deep_research.workflow.unified_workflow import unified_planner_graph
+
+# Build initial state
+state = DeepResearchState(topic="Future of Quantum Computing")
+
+# Execute in multi-agent mode
+config = {
+    "configurable": {
+        "mode": "multi_agent",  # or leave blank and set features["mcp_support"]
+    }
+}
+
+final_state = unified_planner_graph.invoke(state, config)
+print(final_state.final_report)
+```
+
+The unified workflow currently supports:
+
+* Sequential *or* multi-agent research paths.
+* Parallel section research via the `parallel_research` feature flag.
+* Citation numbering and optional raw source block.
+
+Refactor progress is tracked in
+[`UNIFIED_WORKFLOW_PROGRESS.md`](UNIFIED_WORKFLOW_PROGRESS.md).
+
 ## Model Considerations
 
 (1) You can use models supported with [the `init_chat_model()` API](https://python.langchain.com/docs/how_to/chat_models_universal_init/). See full list of supported integrations [here](https://python.langchain.com/api_reference/langchain/chat_models/langchain.chat_models.base.init_chat_model.html).
@@ -484,3 +534,32 @@ Follow the [quickstart](#-quickstart) to start LangGraph server locally.
 ### Hosted deployment
  
 You can easily deploy to [LangGraph Platform](https://langchain-ai.github.io/langgraph/concepts/#deployment-options). 
+
+## Configuration at a Glance
+
+All runtime knobs now live in a single typed object: `open_deep_research.core.settings.settings`.
+
+• **Defaults** are loaded once from environment variables / a `.env` file into that object when the package is imported.
+• **Per-run overrides** can still be supplied via `config={"configurable": …}` when you call the LangGraph pipeline.
+
+To change behaviour you therefore have two options:
+1.  Set an env-var (or add it to your `.env`) – e.g. `SEARCH_BUDGET=50`.
+2.  Pass an override at call-time – e.g. `graph.ainvoke(input, config={"configurable": {"search_budget": 50}})`.
+
+You never need to read or mutate `os.environ` directly – import `settings` instead:
+```python
+from open_deep_research.core.settings import settings
+print(settings.search_budget)
+```
+
+---
+
+### Developer workflow (pre-commit)
+
+Run this once after cloning so the same quality gates enforced in CI run locally:
+```bash
+pre-commit install
+```
+The hook chain formats with Ruff, lints, then runs MyPy before every commit.
+
+---

@@ -43,32 +43,40 @@ async def generate_report_multi_agent(
     if process_search_results:
         config["configurable"]["process_search_results"] = process_search_results
     config["configurable"]["summarization_model"] = summarization_model
-    config["configurable"]["summarization_model_provider"] = summarization_model_provider
+    config["configurable"]["summarization_model_provider"] = (
+        summarization_model_provider
+    )
     config["configurable"]["supervisor_model"] = supervisor_model
     config["configurable"]["researcher_model"] = researcher_model
 
     final_state = await graph.ainvoke(
         # this is a hack
         # TODO: Find workaround at some point
-        {"messages": messages + [{"role": "user", "content": "Generate the report now and don't ask any more follow-up questions"}]},
-        config
+        {
+            "messages": messages
+            + [
+                {
+                    "role": "user",
+                    "content": "Generate the report now and don't ask any more follow-up questions",
+                }
+            ]
+        },
+        config,
     )
-    return {
-        "messages": [
-            {"role": "assistant", "content": final_state["final_report"]}
-        ]
-    }
+    return {"messages": [{"role": "assistant", "content": final_state["final_report"]}]}
+
 
 async def target(inputs: dict):
     return await generate_report_multi_agent(
         inputs["messages"],
         process_search_results,
-        include_source, 
+        include_source,
         summarization_model,
         summarization_model_provider,
         supervisor_model,
-        researcher_model
+        researcher_model,
     )
+
 
 async def main():
     return await client.aevaluate(
@@ -77,8 +85,12 @@ async def main():
         evaluators=evaluators,
         experiment_prefix=f"ODR: Multi Agent - PSR:{process_search_results}, IS:{include_source}",
         max_concurrency=1,
-        metadata={"process_search_results": process_search_results, "include_source": include_source},
+        metadata={
+            "process_search_results": process_search_results,
+            "include_source": include_source,
+        },
     )
+
 
 if __name__ == "__main__":
     results = asyncio.run(main())

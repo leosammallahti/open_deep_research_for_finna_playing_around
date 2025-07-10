@@ -50,27 +50,27 @@ from langchain_core.messages import get_buffer_string
 
 def extract_unique_urls(source_strings: Union[str, List[str]]) -> List[str]:
     """Extract unique URLs from source strings.
-    
+
     This pattern appears in compile_final_report functions in both
     graph.py and workflow.py for formatting source citations.
-    
+
     Args:
         source_strings: Single string or list of strings containing URLs
-        
+
     Returns:
         List of unique URLs in order of first appearance
     """
     # Normalize to list
     if isinstance(source_strings, str):
         source_strings = [source_strings]
-    
+
     all_urls = []
-    url_pattern = r'URL:\s*(https?://[^\s\n]+)'
-    
+    url_pattern = r"URL:\s*(https?://[^\s\n]+)"
+
     for source_str in source_strings:
         urls = re.findall(url_pattern, source_str)
         all_urls.extend(urls)
-    
+
     # Deduplicate while preserving order
     seen = set()
     unique_urls = []
@@ -78,39 +78,39 @@ def extract_unique_urls(source_strings: Union[str, List[str]]) -> List[str]:
         if url not in seen:
             seen.add(url)
             unique_urls.append(url)
-    
+
     return unique_urls
 
 
 def format_sources_section(unique_urls: List[str]) -> str:
     """Format unique URLs into a sources section.
-    
+
     This pattern appears in compile_final_report functions.
-    
+
     Args:
         unique_urls: List of unique URLs
-        
+
     Returns:
         Formatted sources section string
     """
     if not unique_urls:
         return ""
-    
+
     sources_section = "\n\n---\n\n## Sources\n\n"
     for i, url in enumerate(unique_urls, 1):
         sources_section += f"[{i}] {url}\n"
-    
+
     return sources_section
 
 
 def format_sections_to_string(sections: List[Any]) -> str:
     """Format sections into a string representation.
-    
+
     This pattern appears in multiple places for formatting sections.
-    
+
     Args:
         sections: List of section objects
-        
+
     Returns:
         Formatted string representation
     """
@@ -121,30 +121,30 @@ def format_prompt_with_context(
     prompt_template: str,
     topic: str | None = None,
     messages: List[Any] | None = None,
-    **kwargs
+    **kwargs,
 ) -> str:
     """Format prompt templates with standardized context patterns.
-    
+
     This utility handles the common pattern where prompts need either
     a topic string or message history context.
-    
+
     Args:
         prompt_template: The prompt template string
         topic: Topic string (for graph.py style)
         messages: Message history (for workflow.py style)
         **kwargs: Additional format parameters
-        
+
     Returns:
         Formatted prompt string
     """
     format_args = kwargs.copy()
-    
+
     # Handle the topic vs messages pattern
     if topic is not None:
-        format_args['topic'] = topic
+        format_args["topic"] = topic
     elif messages is not None:
-        format_args['messages'] = get_buffer_string(messages)
-    
+        format_args["messages"] = get_buffer_string(messages)
+
     return prompt_template.format(**format_args)
 
 
@@ -153,36 +153,36 @@ def format_section_writer_inputs(
     section: Any,
     source_str: str,
     topic: str | None = None,
-    messages: List[Any] | None = None
+    messages: List[Any] | None = None,
 ) -> str:
     """Format section writer inputs with standardized patterns.
-    
+
     This handles the common pattern of formatting section writer inputs
     with either topic or message context.
-    
+
     Args:
         section_writer_inputs_template: Template string
         section: Section object
         source_str: Source string for context
         topic: Topic string (for graph.py style)
         messages: Message history (for workflow.py style)
-        
+
     Returns:
         Formatted section writer inputs
     """
     format_args = {
-        'section_name': section.name,
-        'section_topic': section.description,
-        'section_content': section.content,
-        'context': source_str
+        "section_name": section.name,
+        "section_topic": section.description,
+        "section_content": section.content,
+        "context": source_str,
     }
-    
+
     # Handle the topic vs messages pattern
     if topic is not None:
-        format_args['topic'] = topic
+        format_args["topic"] = topic
     elif messages is not None:
-        format_args['messages'] = get_buffer_string(messages)
-    
+        format_args["messages"] = get_buffer_string(messages)
+
     return section_writer_inputs_template.format(**format_args)
 
 
@@ -191,30 +191,57 @@ def format_grader_instructions(
     section: Any,
     number_of_queries: int,
     topic: str | None = None,
-    messages: List[Any] | None = None
+    messages: List[Any] | None = None,
 ) -> str:
     """Format section grader instructions with standardized patterns.
-    
+
     Args:
         grader_instructions_template: Template string
         section: Section object
         number_of_queries: Number of follow-up queries
         topic: Topic string (for graph.py style)
         messages: Message history (for workflow.py style)
-        
+
     Returns:
         Formatted grader instructions
     """
     format_args = {
-        'section_topic': section.description,
-        'section': section.content,
-        'number_of_follow_up_queries': number_of_queries
+        "section_topic": section.description,
+        "section": section.content,
+        "number_of_follow_up_queries": number_of_queries,
     }
-    
+
     # Handle the topic vs messages pattern
     if topic is not None:
-        format_args['topic'] = topic
+        format_args["topic"] = topic
     elif messages is not None:
-        format_args['messages'] = get_buffer_string(messages)
-    
-    return grader_instructions_template.format(**format_args) 
+        format_args["messages"] = get_buffer_string(messages)
+
+    return grader_instructions_template.format(**format_args)
+
+
+async def safe_context(
+    source_str: str, target_model: str | None = None, max_tokens: int = 6000
+) -> str:
+    """Ensure *source_str* fits within the model context window.
+
+    This helper performs a lightweight truncation (from the tail) if the input is
+    larger than *max_tokens* (approximate). In future we can plug in an LLM
+    summariser here, but truncation is deterministic and has no external cost.
+
+    Args:
+        source_str: Raw source content.
+        target_model: Name/id of the model that will receive the context – not
+            used by the current implementation but kept for future extensibility.
+        max_tokens: Soft upper-bound on tokens; we approximate 4 chars ≈ 1 token.
+
+    Returns:
+        Context string guaranteed to be under the char threshold (~4×tokens).
+    """
+    approx_max_chars = max_tokens * 4  # rough heuristic
+
+    if len(source_str) <= approx_max_chars:
+        return source_str
+
+    # Truncate from the start to keep most recent information
+    return source_str[-approx_max_chars:]

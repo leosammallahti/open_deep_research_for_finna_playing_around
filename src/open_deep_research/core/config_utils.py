@@ -1,18 +1,20 @@
 """Configuration utilities for extracting and processing config values."""
 
-from typing import Any, Dict, Type, TypeVar, Union, Protocol
+from typing import Any, Dict, Protocol, Type, TypeVar
 
 from langchain_core.runnables import RunnableConfig
 
 # Type variable for configuration classes
-ConfigT = TypeVar('ConfigT')
+ConfigT = TypeVar("ConfigT")
 
 
 class ConfigurationProtocol(Protocol):
     """Protocol for configuration classes that can be created from RunnableConfig."""
-    
+
     @classmethod
-    def from_runnable_config(cls, config: RunnableConfig | None = None) -> "ConfigurationProtocol":
+    def from_runnable_config(
+        cls, config: RunnableConfig | None = None
+    ) -> "ConfigurationProtocol":
         """Create configuration from RunnableConfig."""
         ...
 
@@ -26,7 +28,10 @@ def get_config_value(value: Any) -> Any:
     else:
         return value.value
 
-def get_search_params(search_api: str, search_api_config: Dict[str, Any] | None) -> Dict[str, Any]:
+
+def get_search_params(
+    search_api: str, search_api_config: Dict[str, Any] | None
+) -> Dict[str, Any]:
     """Filter the search_api_config dictionary to include only parameters accepted by the specified search API.
 
     Args:
@@ -38,8 +43,23 @@ def get_search_params(search_api: str, search_api_config: Dict[str, Any] | None)
     """
     # Define accepted parameters for each search API
     SEARCH_API_PARAMS = {
-        "exa": ["max_characters", "num_results", "include_domains", "exclude_domains", "subpages"],
-        "tavily": ["max_results", "topic", "search_depth", "chunks_per_source", "time_range", "include_domains", "exclude_domains", "include_images"],
+        "exa": [
+            "max_characters",
+            "num_results",
+            "include_domains",
+            "exclude_domains",
+            "subpages",
+        ],
+        "tavily": [
+            "max_results",
+            "topic",
+            "search_depth",
+            "chunks_per_source",
+            "time_range",
+            "include_domains",
+            "exclude_domains",
+            "include_images",
+        ],
         "perplexity": [],  # Perplexity accepts no additional parameters
         "arxiv": ["load_max_docs", "get_full_documents", "load_all_available_meta"],
         "pubmed": ["top_k_results", "email", "api_key", "doc_content_chars_max"],
@@ -59,17 +79,16 @@ def get_search_params(search_api: str, search_api_config: Dict[str, Any] | None)
 
 
 def extract_configuration(
-    config: RunnableConfig,
-    config_class: Type[ConfigurationProtocol]
+    config: RunnableConfig, config_class: Type[ConfigurationProtocol]
 ) -> ConfigurationProtocol:
     """Extract configuration from RunnableConfig using the specified class.
-    
+
     This pattern appears at the start of almost every node function.
-    
+
     Args:
         config: The RunnableConfig instance
         config_class: The configuration class to instantiate
-        
+
     Returns:
         Instance of the configuration class
     """
@@ -80,12 +99,12 @@ def get_search_api_params(
     configurable: Any,
 ) -> Dict[str, Any]:
     """Extract search API parameters from configuration.
-    
+
     Common pattern for getting search API and its parameters.
-    
+
     Args:
         configurable: Configuration object with search_api and search_api_config
-        
+
     Returns:
         Dictionary of search parameters
     """
@@ -99,22 +118,22 @@ def get_model_config_values(
     role: str,
 ) -> tuple[str, str, Dict[str, Any] | None]:
     """Extract model configuration values for a specific role.
-    
+
     Common pattern for getting provider, model name, and kwargs.
-    
+
     Args:
         configurable: Configuration object
         role: Model role (e.g., "writer", "planner")
-        
+
     Returns:
         Tuple of (provider, model_name, model_kwargs)
     """
     provider_attr = f"{role}_provider"
     model_attr = f"{role}_model"
     kwargs_attr = f"{role}_model_kwargs"
-    
+
     provider = get_config_value(getattr(configurable, provider_attr))
     model_name = get_config_value(getattr(configurable, model_attr))
     model_kwargs = get_config_value(getattr(configurable, kwargs_attr, None) or {})
-    
-    return provider, model_name, model_kwargs 
+
+    return provider, model_name, model_kwargs
