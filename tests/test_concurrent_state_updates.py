@@ -1,14 +1,16 @@
 """Test concurrent state updates in Pydantic models."""
 
-import pytest
 from typing import get_type_hints
+
+import pytest
+
 from open_deep_research.pydantic_state import (
     DeepResearchState,
+    MaxFn,
+    MinFn,
     SectionResearchState,
     _max_fn,
     _min_fn,
-    MaxFn,
-    MinFn,
 )
 
 

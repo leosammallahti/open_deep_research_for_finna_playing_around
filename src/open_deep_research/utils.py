@@ -1439,10 +1439,11 @@ async def select_and_execute_search(
 
     # Web search
     if search_api == "tavily":
+        from langchain_tavily import TavilySearch
+
         from open_deep_research.tavily_tools import (
             acquire_tavily_semaphore,
         )
-        from langchain_tavily import TavilySearch
 
         async def _run_search(q: str):
             async with acquire_tavily_semaphore():
@@ -1753,8 +1754,9 @@ async def get_structured_output_with_fallback(
     Returns:
         Structured output matching the schema_class
     """
-    from open_deep_research.exceptions import FatalModelError
     import httpx
+
+    from open_deep_research.exceptions import FatalModelError
 
     def _is_transient(exc: Exception) -> bool:  # noqa: D401 – small inline helper
         """Return *True* if *exc* is considered transient/network-related."""

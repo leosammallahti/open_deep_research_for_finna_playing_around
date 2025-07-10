@@ -5,11 +5,9 @@ including report sections, search queries, feedback, and multi-agent workflow st
 """
 
 import operator
-from typing import Annotated, List, Literal, Callable, Optional, Union
-from typing_extensions import NotRequired, Required
+from typing import Annotated, List, Literal, Optional
 
-from langchain_core.messages import AnyMessage, BaseMessage
-from langgraph.graph.message import add_messages
+from langchain_core.messages import AnyMessage
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -53,7 +51,6 @@ def _min_fn(old, new):
 MinFn = _min_fn
 
 # Import operator for proper reducer annotations
-import operator
 
 
 # Define a custom reducer for sections that accumulates them

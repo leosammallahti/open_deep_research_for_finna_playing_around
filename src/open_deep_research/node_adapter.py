@@ -94,6 +94,7 @@ class NodeAdapter:
         """
 
         import os
+
         from open_deep_research.configuration import SearchAPI, WorkflowConfiguration
         from open_deep_research.unified_models import (
             ResearchResult,
@@ -198,6 +199,7 @@ class NodeAdapter:
         """
 
         import os
+
         from open_deep_research.configuration import SearchAPI, WorkflowConfiguration
         from open_deep_research.unified_models import ResearchResult
 

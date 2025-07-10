@@ -1,10 +1,11 @@
-import pytest
 from dataclasses import asdict
 
+import pytest
+from langchain_core.runnables import RunnableConfig
+
+from open_deep_research.configuration import SearchAPI, WorkflowConfiguration
 from open_deep_research.pydantic_state import DeepResearchState, Section
 from open_deep_research.workflow.unified_compiler import compile_report_unified
-from open_deep_research.configuration import WorkflowConfiguration, SearchAPI
-from langchain_core.runnables import RunnableConfig
 
 
 @pytest.mark.asyncio

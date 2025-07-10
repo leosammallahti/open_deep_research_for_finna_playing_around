@@ -1,9 +1,8 @@
 import pytest
 
 from open_deep_research.configuration import (
-    WorkflowConfiguration,
     MultiAgentConfiguration,
-    SearchAPI,
+    WorkflowConfiguration,
 )
 
 

@@ -16,8 +16,6 @@ Run with::
 
 from __future__ import annotations
 
-from typing import List
-
 import hypothesis.strategies as st
 from hypothesis import given
 

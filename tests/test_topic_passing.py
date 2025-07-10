@@ -1,7 +1,8 @@
 """Test that topic is properly passed to sub-graphs."""
 
 import pytest
-from open_deep_research.graph import initiate_section_research, get_state_value
+
+from open_deep_research.graph import get_state_value, initiate_section_research
 from open_deep_research.pydantic_state import Section
 
 
