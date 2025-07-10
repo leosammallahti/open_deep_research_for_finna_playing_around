@@ -1741,7 +1741,7 @@ def _create_fallback_instance(schema_class: type[BaseModel]) -> BaseModel:
                                 field_value = None
                             else:
                                 continue  # Skip this field if we can't determine a default
-                        
+
                         defaults[field_name] = field_value
 
                 return schema_class(**defaults)
