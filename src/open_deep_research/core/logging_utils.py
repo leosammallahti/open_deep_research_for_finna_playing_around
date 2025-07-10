@@ -136,7 +136,6 @@ def set_trace_id(trace_id: str) -> None:
 
 def bind_log_context(**kwargs: str) -> None:  # noqa: D401
     """Bind arbitrary logging context using structlog's contextvars backend."""
-
     from structlog.contextvars import bind_contextvars
 
     if kwargs:
