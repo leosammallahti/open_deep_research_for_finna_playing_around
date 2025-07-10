@@ -1711,31 +1711,38 @@ def _create_fallback_instance(schema_class: type[BaseModel]) -> BaseModel:
             try:
                 # Get the schema fields and try to provide minimal defaults
                 fields = getattr(schema_class, "__fields__", {})
-                defaults = {}
+                defaults: Dict[str, Any] = {}
 
                 # Common fallback values for different field types
                 for field_name, field_info in fields.items():
                     if hasattr(field_info, "annotation"):
                         field_type = field_info.annotation
                         # Handle common types
+                        field_value: Any
                         if field_type is str:
-                            defaults[field_name] = "Fallback value"
+                            field_value = "Fallback value"
                         elif field_type is int:
-                            defaults[field_name] = 0
+                            field_value = 0
                         elif field_type is bool:
-                            defaults[field_name] = False
+                            field_value = False
                         elif field_type is list or str(field_type).startswith(
                             "typing.List"
                         ):
-                            defaults[field_name] = []
+                            field_value = []
                         elif field_type is dict or str(field_type).startswith(
                             "typing.Dict"
                         ):
-                            defaults[field_name] = {}
+                            field_value = {}
                         else:
                             # For unknown types, try to provide None if it's Optional
-                            if str(field_type).startswith("typing.Union") or str(field_type).startswith("typing.Optional"):
-                                defaults[field_name] = None
+                            if str(field_type).startswith("typing.Union") or str(
+                                field_type
+                            ).startswith("typing.Optional"):
+                                field_value = None
+                            else:
+                                continue  # Skip this field if we can't determine a default
+                        
+                        defaults[field_name] = field_value
 
                 return schema_class(**defaults)
             except Exception:
@@ -1796,7 +1803,9 @@ async def get_structured_output_with_fallback(
         # If structured output fails, fall back to prompt-based parsing
 
         # Add JSON format instructions to the last message
-        parser: PydanticOutputParser[BaseModel] = PydanticOutputParser(pydantic_object=schema_class)
+        parser: PydanticOutputParser[BaseModel] = PydanticOutputParser(
+            pydantic_object=schema_class
+        )
         format_instructions = parser.get_format_instructions()
 
         # Modify the last message to include format instructions
@@ -1810,7 +1819,9 @@ async def get_structured_output_with_fallback(
                 modified_messages[-1].content.append(f"\n\n{format_instructions}")
             else:
                 # Convert to string and concatenate
-                modified_messages[-1].content = str(modified_messages[-1].content) + f"\n\n{format_instructions}"
+                modified_messages[-1].content = (
+                    str(modified_messages[-1].content) + f"\n\n{format_instructions}"
+                )
 
         # Get raw response
         raw_response = await model.ainvoke(modified_messages)
