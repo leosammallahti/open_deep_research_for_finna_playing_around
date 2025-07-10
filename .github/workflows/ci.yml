@@ -39,11 +39,4 @@ jobs:
 
       - name: Check migration completeness
         run: |
-          python -c "
-          from open_deep_research.migration import MigrationTracker
-          if not MigrationTracker.is_complete():
-              print('::warning::Some migrations are still pending')
-              for field, pct in MigrationTracker.status().items():
-                  print(f'{field}: {pct:.0f}% complete')
-              exit(1)
-          " 
+          python -c "from open_deep_research.migration import MigrationTracker; import sys; sys.exit(0 if MigrationTracker.is_complete() else 1)" 
