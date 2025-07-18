@@ -80,3 +80,17 @@ temp/
 # Local startup scripts with machine-specific paths
 start_langgraph.bat
 start_langgraph.ps1
+
+# Ignore local virtual environments
+.venv/
+
+# Ignore diagnostic / lint artifacts and logs
+ruff_issues*.*
+credit_usage.jsonl
+blame_output.txt
+full_log.txt
+full_test_output.txt
+
+# Ignore test-run caches and scratch data
+.hypothesis/
+.notes/
