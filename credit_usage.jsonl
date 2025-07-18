@@ -2627,3 +2627,7 @@
 {"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 141, "ts": "2025-07-18T00:07:49.857060"}
 {"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-18T00:07:53.306740"}
 {"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 140, "ts": "2025-07-18T00:07:57.821820"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 139, "ts": "2025-07-18T00:08:01.131858"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-18T00:08:06.118048"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-18T00:08:10.064219"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-18T00:08:14.013338"}
