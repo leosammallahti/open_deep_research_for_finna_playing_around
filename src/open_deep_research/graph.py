@@ -5,15 +5,15 @@ including report planning, section generation, web search, and content compilati
 """
 
 # NOTE: Keep the public typing imports grouped – we add ``Any`` utility below
-from typing import Any, Dict, List, Mapping, TypeVar, Union, cast
+from typing import Any, Dict, List, Mapping, TypeVar, cast
 
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
-from langgraph.types import Command, RetryPolicy, Send
+from langgraph.types import RetryPolicy, Send
 
 # Third-party/local imports --------------------------------------------------
-import open_deep_research.utils as _odr_utils
 from open_deep_research.configuration import WorkflowConfiguration
 from open_deep_research.core import (
     extract_configuration,
@@ -25,13 +25,11 @@ from open_deep_research.core import (
 from open_deep_research.core.config_utils import get_config_value
 from open_deep_research.core.format_utils import safe_context
 from open_deep_research.core.logging_utils import get_logger
+from open_deep_research.model_registry import ModelRole
+from open_deep_research.prompt_loader import load_prompt
 from open_deep_research.prompts import (
-    final_section_writer_instructions,
-    query_writer_instructions,
     report_planner_instructions,
-    section_grader_instructions,
     section_writer_inputs,
-    section_writer_instructions,
 )
 from open_deep_research.pydantic_state import (
     DeepResearchState,
@@ -42,6 +40,7 @@ from open_deep_research.pydantic_state import (
     SectionResearchState,
     Sections,
 )
+from open_deep_research.search_dispatcher import select_and_execute_search
 from open_deep_research.utils import (
     filter_think_tokens,
     format_sections_for_context,
@@ -51,6 +50,14 @@ from open_deep_research.utils import (
 )
 
 logger = get_logger(__name__)
+
+# --- Constants ---
+SEARCH_API_NONE = "none"
+GRADE_PASS = "pass"
+GRADE_FAIL = "fail"
+DEFAULT_TOPIC = "Research Topic"
+DEFAULT_SECTION_NAME = "Main"
+DEFAULT_SECTION_DESC = "Main content"
 
 # --- helper utility for guarded state access ---
 
@@ -88,10 +95,81 @@ def get_state_value(
     return cast("T | None", value)
 
 
-# Note: SectionResearchState imported above; legacy comment removed as part of lint cleanup.
+# --- Common Model Helper ---
+
+def _get_model_for_role(
+    configurable: WorkflowConfiguration, role: ModelRole
+) -> tuple[BaseChatModel, str | None]:
+    """Get and initialize a model for a specific role.
+    
+    This consolidates the duplicate logic from _get_planner_model, _get_writer_model, etc.
+    """
+    provider, model_name, model_id = configurable.get_model_for_role(role)
+    
+    # Get the appropriate kwargs based on role
+    model_kwargs = {
+        "planner": configurable.planner_model_kwargs,
+        "writer": configurable.writer_model_kwargs,
+        "reflection": configurable.planner_model_kwargs,  # Re-uses planner kwargs
+    }.get(role, {})
+    
+    model = initialize_model(provider, model_name, model_kwargs or {})
+    return model, model_id
+
+
+# --- Report Planning Helper Functions ---
+
+async def _generate_report_sections(
+    model: BaseChatModel, 
+    model_id: str | None, 
+    topic: str, 
+    feedback: str, 
+    configurable: WorkflowConfiguration
+) -> Sections:
+    """Generate report sections using the planner model."""
+    system_instructions = report_planner_instructions.format(
+        topic=topic,
+        report_organization=configurable.report_structure,
+        context="",  # Initial planning phase, no context needed
+        feedback=feedback,
+        today=get_today_str(),
+    )
+    
+    output = await get_structured_output_with_fallback(
+        model,
+        Sections,
+        [
+            SystemMessage(content=system_instructions),
+            HumanMessage(content="Generate the sections of the report. Your response must include a 'sections' field containing a list of sections."),
+        ],
+        model_id=model_id,
+    )
+    return cast(Sections, output)
+
+
+def _create_fallback_sections(topic: str) -> List[Section]:
+    """Create fallback sections when planner fails."""
+    logger.warning("Planner model returned no sections – generating fallback plan.")
+    return [
+        Section(
+            name="Introduction",
+            description=f"Overview of {topic}",
+            research=True,
+        )
+    ]
+
+
+def _ensure_research_flags(sections: List[Section]) -> None:
+    """Ensure sections have the required research flag set to True (mutates in place)."""
+    for section in sections:
+        # Pydantic will provide a default False if the field was omitted; we
+        # flip it to *True* because the downstream graph expects at least the
+        # introduction to trigger the research branch.
+        if not getattr(section, "research", False):
+            object.__setattr__(section, "research", True)
+
 
 ## Nodes --
-
 
 async def generate_report_plan(
     state: DeepResearchState, config: RunnableConfig
@@ -104,61 +182,21 @@ async def generate_report_plan(
     topic = state.topic
     feedback = " ".join(state.feedback or [])
 
-    # 1. Get the planner model
-    planner_provider, planner_model_name, planner_model_id = (
-        configurable.get_model_for_role("planner")
-    )
-    planner_llm = initialize_model(
-        planner_provider, planner_model_name, configurable.planner_model_kwargs
+    # Get the planner model
+    planner_model, planner_model_id = _get_model_for_role(configurable, "planner")
+
+    # Generate the report sections
+    report_sections = await _generate_report_sections(
+        planner_model, planner_model_id, topic, feedback, configurable
     )
 
-    # 2. Generate the report sections
-    system_instructions_sections = report_planner_instructions.format(
-        topic=topic,
-        report_organization=configurable.report_structure,
-        context="",  # Initial planning phase, no context needed
-        feedback=feedback,
-        today=get_today_str(),
-    )
-    planner_message = "Generate the sections of the report. Your response must include a 'sections' field containing a list of sections."
-
-    output = await get_structured_output_with_fallback(
-        planner_llm,
-        Sections,
-        [
-            SystemMessage(content=system_instructions_sections),
-            HumanMessage(content=planner_message),
-        ],
-        model_id=planner_model_id,
-    )
-    report_sections = cast("Sections", output)
-
-    # --- Fallback Handling -------------------------------------------------
-    # If the planner fails to produce any sections (e.g. due to missing API
-    # keys or parsing errors) we still want the workflow to progress instead
-    # of silently completing with an empty final report.  In that case we
-    # create a minimal single‐section plan that can be filled in by the
-    # downstream nodes.  This keeps the user experience smooth and surfaces
-    # a meaningful report even when advanced planning models are unavailable.
+    # Handle fallback if no sections were generated
     if not report_sections.sections:
-        logger.warning("Planner model returned no sections – generating fallback plan.")
-        report_sections.sections = [
-            Section(
-                name="Introduction",
-                description=f"Overview of {topic}",
-                research=True,
-            )
-        ]
+        report_sections.sections = _create_fallback_sections(topic)
 
-    # Ensure the 'research' flag is present and defaults to True when missing
-    for s in report_sections.sections:
-        # Pydantic will provide a default False if the field was omitted; we
-        # flip it to *True* because the downstream graph expects at least the
-        # introduction to trigger the research branch.
-        if not hasattr(s, "research") or s.research is False:
-            object.__setattr__(s, "research", True)
+    # Ensure research flags are set
+    _ensure_research_flags(report_sections.sections)
 
-    # Initialise credits_remaining in state using the configured search_budget
     return {
         "sections": report_sections.sections,
         "credits_remaining": configurable.search_budget,
@@ -186,15 +224,10 @@ async def generate_queries(
     section = cast("Section", get_state_value(state, "section", required=True))
 
     # 1. Get the writer model (or a dedicated query model if specified)
-    writer_provider, writer_model_name, writer_model_id = (
-        configurable.get_model_for_role("writer")
-    )
-    writer_model = initialize_model(
-        writer_provider, writer_model_name, configurable.writer_model_kwargs
-    )
+    writer_model, writer_model_id = _get_model_for_role(configurable, "writer")
 
     # 2. Generate queries
-    system_instructions = query_writer_instructions.format(
+    system_instructions = load_prompt("query_writer").format(
         topic=topic,
         section_topic=section.description,
         number_of_queries=configurable.number_of_queries,
@@ -219,6 +252,46 @@ async def generate_queries(
     }
 
 
+# --- Search Web Helper Functions ---
+
+def _calculate_search_cost(params: Dict[str, Any]) -> int:
+    """Calculate the cost of a search operation based on parameters."""
+    ADVANCED_DEPTH = "advanced"
+    DEFAULT_RESULTS = 5
+    ADVANCED_MULTIPLIER = 2
+    BASIC_MULTIPLIER = 1
+    
+    depth_label = params.get("search_depth", ADVANCED_DEPTH)
+    depth_multiplier = (
+        ADVANCED_MULTIPLIER if str(depth_label).lower() == ADVANCED_DEPTH 
+        else BASIC_MULTIPLIER
+    )
+    
+    num_results = params.get("num_results") or params.get("max_results") or DEFAULT_RESULTS
+    try:
+        num_results_int = int(num_results)
+    except (ValueError, TypeError):
+        num_results_int = DEFAULT_RESULTS
+
+    return depth_multiplier * num_results_int
+
+
+async def _execute_search(
+    search_api: str, query_list: List[str], params: Dict[str, Any]
+) -> str:
+    """Execute the search operation and handle both sync and async results."""
+    search_result = select_and_execute_search(
+        search_api, query_list, params
+    )
+
+    if hasattr(search_result, "__await__"):
+        # The helper is an async function – await the coroutine
+        return await search_result
+    else:
+        # Synchronous stub – use value directly
+        return str(search_result)
+
+
 async def search_web(
     state: SectionResearchState, config: RunnableConfig
 ) -> Dict[str, Any]:
@@ -227,73 +300,34 @@ async def search_web(
 
     bind_log_context(node="search_web")
     configurable = WorkflowConfiguration.from_runnable_config(config)
-    params_to_pass = get_search_api_params(configurable)
+    params = get_search_api_params(configurable)
     search_api_val = get_config_value(configurable.search_api)
-    search_api = str(search_api_val) if search_api_val is not None else "none"
+    search_api = str(search_api_val) if search_api_val is not None else SEARCH_API_NONE
 
-    # Fetch current queries directly
     query_list = list(state.search_queries)
 
-    # Budget accounting -----------------------------------------------------
+    # Budget accounting
     credits_remaining = (
         state.credits_remaining
         if state.credits_remaining is not None
         else configurable.search_budget
     )
-
-    if search_api != "none":
-        depth_label = params_to_pass.get("search_depth", "advanced")
-        # Bug fix: A "basic" or "standard" search costs 1 credit, not 2.
-        # Check explicitly for "advanced" to get the 2x multiplier.
-        depth_multiplier = 2 if str(depth_label).lower() == "advanced" else 1
-        num_results = (
-            params_to_pass.get("num_results") or params_to_pass.get("max_results") or 5
-        )
-        try:
-            num_results_int = int(num_results)
-        except Exception:
-            num_results_int = 5
-
-        cost = depth_multiplier * num_results_int
-
-        # TEMPORARILY DISABLED: Search budget enforcement
-        # if cost > credits_remaining:
-        #     logger.warning(
-        #         "Search budget (%s) exhausted – cost %s > remaining %s",
-        #         configurable.search_budget,
-        #         cost,
-        #         credits_remaining,
-        #     )
-        #     raise OutOfBudgetError(remaining=credits_remaining)
-
+    
+    # Update credits if using a search API
+    if search_api != SEARCH_API_NONE:
+        cost = _calculate_search_cost(params)
         credits_remaining -= cost
 
-    # ----------------------------------------------------------------------
+    # Execute search
+    source_str = await _execute_search(search_api, query_list, params)
 
-    # Run the web search helper – it might be patched to a synchronous lambda
-    # in unit tests, so we detect coroutine results at runtime.
-    # ``select_and_execute_search`` may return either a string or a coroutine
-    # depending on whether the underlying implementation is synchronous or
-    # asynchronous.  We type it as ``Any`` and resolve at runtime.
-    search_result: Any = _odr_utils.select_and_execute_search(
-        search_api,
-        query_list,
-        params_to_pass,
-    )
-
-    if hasattr(search_result, "__await__"):
-        # The helper is an async function – await the coroutine.
-        source_str = await search_result
-    else:
-        # Synchronous stub – use value directly.
-        source_str = cast(str, search_result)
-
-    # Structured logging ----------------------------------------------------
+    # Structured logging
+    cost_used = (configurable.search_budget - credits_remaining) if search_api != SEARCH_API_NONE else 0
     logger.info(
         "search_web | iter=%s/%s | cost=%s | remaining=%s | section=%s",
         state.search_iterations + 1,
         configurable.max_search_depth,
-        (configurable.search_budget - credits_remaining) if search_api != "none" else 0,
+        cost_used,
         credits_remaining,
         state.section.name if state.section else "-",
     )
@@ -302,46 +336,34 @@ async def search_web(
         "source_str": source_str,
         "section": state.section,
         "search_queries": state.search_queries,
-        # Increment the search depth counter to ensure the reflection loop can terminate
         "search_iterations": state.search_iterations + 1,
         "credits_remaining": credits_remaining,
     }
 
 
-async def write_section(
-    state: SectionResearchState, config: RunnableConfig
-) -> Union[Dict[str, Any], Command[Any]]:
-    """Write a section of the report based on search results and reflect on it."""
-    from open_deep_research.core.logging_utils import bind_log_context
+# --- Write Section Helper Functions ---
 
-    bind_log_context(node="write_section")
-    configurable = WorkflowConfiguration.from_runnable_config(config)
-    # Guarded state access with sensible defaults
-    topic = get_state_value(state, "topic", "Research Topic")
-    section = get_state_value(state, "section")
-    source_str = cast("str", get_state_value(state, "source_str", ""))
-    search_iterations = state.search_iterations
-
-    # Ensure section exists
+def _ensure_section_exists(section: Section | None) -> Section:
+    """Ensure a section exists, creating a default if necessary."""
     if not section:
-        # Should rarely happen but keep behaviour consistent
         logger.warning("No section found in state, creating default")
-        section = Section(name="Main", description="Main content", research=True)
+        return Section(
+            name=DEFAULT_SECTION_NAME, 
+            description=DEFAULT_SECTION_DESC, 
+            research=True
+        )
+    return section
 
-    # 1. Get the writer model
-    writer_provider, writer_model_name, writer_model_id = (
-        configurable.get_model_for_role("writer")
-    )
-    writer_model = initialize_model(
-        writer_provider, writer_model_name, configurable.writer_model_kwargs or {}
-    )
 
-    # 2. Truncate source_str if needed for models with limited context
-    # Ensure context fits model window
-    source_str = await safe_context(source_str, target_model=writer_model_id)
-
-    # 3. Write the section content
-    writer_system_message = section_writer_instructions.format(
+async def _write_section_content(
+    model: BaseChatModel, 
+    model_id: str | None, 
+    topic: str, 
+    section: Section, 
+    source_str: str
+) -> str:
+    """Write the section content using the writer model."""
+    writer_system_message = load_prompt("section_writer").format(
         topic=topic, section_name=section.name
     )
     writer_human_message = section_writer_inputs.format(
@@ -355,29 +377,27 @@ async def write_section(
     section_content_result = cast(
         "SectionOutput",
         await get_structured_output_with_fallback(
-            writer_model,
+            model,
             SectionOutput,
             [
                 SystemMessage(content=writer_system_message),
                 HumanMessage(content=writer_human_message),
             ],
-            model_id=writer_model_id,
+            model_id=model_id,
         ),
     )
-    section.content = filter_think_tokens(section_content_result.section_content)
+    return filter_think_tokens(section_content_result.section_content)
 
-    # 4. Get the reflection model
-    reflection_provider, reflection_model_name, reflection_model_id = (
-        configurable.get_model_for_role("reflection")
-    )
-    reflection_model = initialize_model(
-        reflection_provider,
-        reflection_model_name,
-        configurable.planner_model_kwargs or {},  # Re-use planner kwargs for reflection
-    )
 
-    # 5. Reflect and grade the section
-    section_grader_instructions_formatted = section_grader_instructions.format(
+async def _reflect_on_section(
+    model: BaseChatModel, 
+    model_id: str | None, 
+    topic: str, 
+    section: Section, 
+    configurable: WorkflowConfiguration
+) -> Feedback:
+    """Reflect on and grade the section content."""
+    section_grader_instructions_formatted = load_prompt("section_grader").format(
         topic=topic,
         section_topic=section.description,
         section=section.content,
@@ -390,39 +410,115 @@ async def write_section(
     feedback = cast(
         "Feedback",
         await get_structured_output_with_fallback(
-            reflection_model,
+            model,
             Feedback,
             [
                 SystemMessage(content=section_grader_instructions_formatted),
                 HumanMessage(content=section_grader_message),
             ],
-            model_id=reflection_model_id,
+            model_id=model_id,
         ),
     )
+    return feedback
 
-    # 6. Decide whether to finish or iterate
-    # If the section is passing or the max search depth is reached, publish the section to completed sections
-    if feedback.grade == "pass" or search_iterations >= configurable.max_search_depth:
-        # Create a dictionary with only the fields that need to be accumulated.
-        update = {
-            "completed_sections": [section],
-            "credits_remaining": state.credits_remaining or configurable.search_budget,
-            "should_continue": False,  # Signal that we're done
-        }
-        if configurable.include_source_str:
-            update["source_str"] = source_str
 
-        # Return the update dictionary. The conditional edge will route to END.
-        return update
+def _create_completion_update(
+    section: Section, source_str: str, state: SectionResearchState, configurable: WorkflowConfiguration
+) -> Dict[str, Any]:
+    """Create update dictionary for completed section."""
+    update = {
+        "completed_sections": [section],
+        "credits_remaining": state.credits_remaining or configurable.search_budget,
+        "should_continue": False,  # Signal that we're done
+    }
+    if configurable.include_source_str:
+        update["source_str"] = source_str
+    return update
 
-    # If more research is needed, prepare for another iteration
+
+def _create_iteration_update(
+    section: Section, feedback: Feedback, state: SectionResearchState, configurable: WorkflowConfiguration
+) -> Dict[str, Any]:
+    """Create update dictionary for another iteration."""
+    return {
+        "search_queries": [q.search_query for q in feedback.follow_up_queries],
+        "section": section,
+        "credits_remaining": state.credits_remaining or configurable.search_budget,
+        "should_continue": True,  # Signal that we need more research
+    }
+
+
+async def draft_section_content(
+    state: SectionResearchState, config: RunnableConfig
+) -> Dict[str, Any]:
+    """Generate the draft content for a single report section.
+
+    This node performs a single LLM call (writer model) and **does not** mutate
+    the incoming Section instance.  Instead it returns an immutable update with
+    a *new* Section carrying the generated content so LangGraph can capture the
+    state diff cleanly for Studio.
+    """
+    from open_deep_research.core.logging_utils import bind_log_context
+
+    bind_log_context(node="draft_section_content")
+
+    configurable = WorkflowConfiguration.from_runnable_config(config)
+
+    # Extract basic state – never mutate the original objects
+    topic: str = get_state_value(state, "topic", DEFAULT_TOPIC) or DEFAULT_TOPIC
+    section: Section = _ensure_section_exists(get_state_value(state, "section"))
+    source_str: str = cast("str", get_state_value(state, "source_str", ""))
+
+    # Select the writer model and prepare the context
+    writer_model, writer_model_id = _get_model_for_role(configurable, "writer")
+    source_str = await safe_context(source_str, target_model=writer_model_id)
+
+    # Call the model – single LLM interaction
+    new_content: str = await _write_section_content(
+        writer_model, writer_model_id, topic, section, source_str
+    )
+
+    # Return a *new* Section object – never mutate in-place
+    new_section: Section = section.model_copy(update={"content": new_content})
+
+    return {"section": new_section}
+
+
+async def grade_section(
+    state: SectionResearchState, config: RunnableConfig
+) -> Dict[str, Any]:
+    """Evaluate a drafted section and decide whether to iterate or complete.
+
+    A single LLM call (reflection model) providing a clear Studio trace.  The
+    node either returns a completion update or an iteration update containing
+    follow-up queries.  No in-place mutations occur here.
+    """
+    from open_deep_research.core.logging_utils import bind_log_context
+
+    bind_log_context(node="grade_section")
+
+    configurable = WorkflowConfiguration.from_runnable_config(config)
+
+    # Gather state
+    topic: str = get_state_value(state, "topic", DEFAULT_TOPIC) or DEFAULT_TOPIC
+    section: Section = _ensure_section_exists(get_state_value(state, "section"))
+    source_str: str = cast("str", get_state_value(state, "source_str", ""))
+    search_iterations: int = state.search_iterations
+
+    # Reflection model call – single LLM interaction
+    reflection_model, reflection_model_id = _get_model_for_role(configurable, "reflection")
+    feedback: Feedback = await _reflect_on_section(
+        reflection_model, reflection_model_id, topic, section, configurable
+    )
+
+    # Decide whether to finish or iterate
+    if (
+        feedback.grade == GRADE_PASS
+        or search_iterations >= configurable.max_search_depth
+    ):
+        return _create_completion_update(section, source_str, state, configurable)
     else:
-        return {
-            "search_queries": [q.search_query for q in feedback.follow_up_queries],
-            "section": section,
-            "credits_remaining": state.credits_remaining or configurable.search_budget,
-            "should_continue": True,  # Signal that we need more research
-        }
+        return _create_iteration_update(section, feedback, state, configurable)
 
 
 async def write_final_sections(state: Any, config: RunnableConfig) -> Dict[str, Any]:
@@ -471,7 +567,7 @@ async def write_final_sections(state: Any, config: RunnableConfig) -> Dict[str, 
     completed_report_sections = format_sections_for_context(completed_sections)
 
     # Format system instructions
-    system_instructions = final_section_writer_instructions.format(
+    system_instructions = load_prompt("final_section_writer").format(
         topic=topic,
         section_name=section.name,
         section_topic=section.description,
@@ -507,6 +603,120 @@ def gather_completed_sections(state: DeepResearchState) -> Dict[str, Any]:
     return {}
 
 
+# --- Compile Final Report Helper Functions ---
+
+def _organize_sections_by_order(
+    sections: List[Section], completed_sections: List[Section]
+) -> List[Section]:
+    """Organize sections by their original planned order."""
+    section_order = [s.name for s in sections]
+    completed_sections_map = {s.name: s for s in completed_sections}
+    
+    # Ensure all sections are present, using original if completion is missing
+    organized = []
+    for name in section_order:
+        section = completed_sections_map.get(name)
+        if not section:
+            # Find original section as fallback
+            section = next((s for s in sections if s.name == name), None)
+        if section:
+            organized.append(section)
+    
+    return organized
+
+
+def _log_compilation_debug_info(
+    sections: List[Section], completed_sections: List[Section], final_sections: List[Section]
+) -> None:
+    """Log debug information about section compilation."""
+    logger.info(
+        "compile_final_report called with %d sections, %d completed",
+        len(sections),
+        len(completed_sections),
+    )
+    
+    for i, section in enumerate(sections):
+        logger.info(
+            "Section %d: %s (research=%s)", i, section.name, section.research
+        )
+    
+    for i, section in enumerate(completed_sections):
+        logger.info(
+            "Completed %d: %s (content length=%d)",
+            i,
+            section.name,
+            len(section.content),
+        )
+    
+    logger.info("Final sections count: %d", len(final_sections))
+
+
+def _create_fallback_report_body(final_sections: List[Section], topic: str) -> str:
+    """Create a fallback report body when formatting fails."""
+    logger.warning("Report body is empty after formatting!")
+    report_parts = []
+    report_parts.append(f"# Research Report: {topic}\n")
+
+    for section in final_sections:
+        if section.content and section.content.strip():
+            report_parts.append(f"## {section.name}\n")
+            report_parts.append(f"{section.content}\n")
+
+    if len(report_parts) > 1:
+        report_body = "\n".join(report_parts)
+        logger.info("Constructed fallback report with %d parts", len(report_parts))
+        return report_body
+    else:
+        return "Report generation failed. No section content was available."
+
+
+def _add_sources_to_report(
+    report_body: str, state: DeepResearchState, configurable: WorkflowConfiguration
+) -> str:
+    """Add sources section to the report if requested."""
+    if not configurable.include_source_str:
+        logger.debug("Sources not included because include_source_str is False")
+        return report_body
+
+    all_source_str = get_state_value(state, "source_str", "")
+    if not all_source_str:
+        logger.debug("No source_str collected from any sections")
+        return report_body
+
+    # Use shared utility for URL extraction and formatting
+    unique_urls = extract_unique_urls(all_source_str)
+    sources_section = format_sources_section(unique_urls)
+    if sources_section:
+        report_body += sources_section
+        logger.debug("Added sources section with %d URLs", len(unique_urls))
+    else:
+        logger.debug(
+            "Sources section was empty even though we have %d URLs",
+            len(unique_urls),
+        )
+
+    # Optionally include the raw sources string for richer context
+    if configurable.include_raw_source_details:
+        report_body += "\n\n---\n\n## Raw Sources\n\n" + all_source_str
+
+    return report_body
+
+
+def _create_error_report(state: DeepResearchState, error: Exception) -> str:
+    """Create an error report when compilation fails."""
+    return f"""# Research Report Generation Failed
+
+**Topic:** {get_state_value(state, "topic", "Unknown")}
+
+**Error:** {str(error)}
+
+**Sections Planned:** {len(get_state_value(state, "sections", []) or [])}
+**Sections Completed:** {len(get_state_value(state, "completed_sections", []) or [])}
+
+Please check the logs for more details.
+"""
+
+
 async def compile_final_report(
     state: DeepResearchState, config: RunnableConfig
 ) -> Dict[str, str]:
@@ -519,49 +729,15 @@ async def compile_final_report(
     )
 
     try:
-        # Sort sections by their original planned order
-        # Use get_state_value to handle both dict and Pydantic model inputs
+        # Organize sections by their original planned order
         sections: List[Section] = get_state_value(state, "sections", []) or []
-        section_order = [s.name for s in sections]
-
-        # Use a dictionary for quick lookup and update
         completed_sections: List[Section] = (
             get_state_value(state, "completed_sections", []) or []
         )
-        completed_sections_map = {s.name: s for s in completed_sections}
-
-        # Debug logging
-        logger.info(
-            "compile_final_report called with %d sections, %d completed",
-            len(sections),
-            len(completed_sections),
-        )
-        for i, section in enumerate(sections):
-            logger.info(
-                "Section %d: %s (research=%s)", i, section.name, section.research
-            )
-        for i, section in enumerate(completed_sections):
-            logger.info(
-                "Completed %d: %s (content length=%d)",
-                i,
-                section.name,
-                len(section.content),
-            )
-
-        # Ensure all sections are present, using original if completion is missing.
-        # We build an intermediate list that may contain ``None`` then immediately
-        # filter it so the public ``final_sections`` variable is strictly
-        # ``List[Section]`` for downstream type‐safety.
-        _maybe_sections = [
-            completed_sections_map.get(
-                name, next((s for s in sections if s.name == name), None)
-            )
-            for name in section_order
-        ]
-
-        final_sections: List[Section] = [s for s in _maybe_sections if s is not None]
-
-        logger.info("Final sections count: %d", len(final_sections))
+        final_sections = _organize_sections_by_order(sections, completed_sections)
+        
+        # Log debug information
+        _log_compilation_debug_info(sections, completed_sections, final_sections)
 
         # Check if we have any content at all
         if not final_sections:
@@ -581,75 +757,18 @@ async def compile_final_report(
 
         # If report body is empty, try to construct something from what we have
         if not report_body or report_body.strip() == "":
-            logger.warning("Report body is empty after formatting!")
-            # Try to construct a basic report from completed sections
-            report_parts = []
-            report_parts.append(
-                f"# Research Report: {get_state_value(state, 'topic', 'Unknown Topic')}\n"
-            )
-
-            for section in final_sections:
-                if section.content and section.content.strip():
-                    report_parts.append(f"## {section.name}\n")
-                    report_parts.append(f"{section.content}\n")
-
-            if len(report_parts) > 1:
-                report_body = "\n".join(report_parts)
-                logger.info(
-                    "Constructed fallback report with %d parts", len(report_parts)
-                )
-            else:
-                report_body = (
-                    "Report generation failed. No section content was available."
-                )
+            topic = get_state_value(state, "topic", "Unknown Topic") or "Unknown Topic"
+            report_body = _create_fallback_report_body(final_sections, topic)
 
         # Add sources if requested
-        if configurable.include_source_str:
-            # The source_str field accumulates all sources from parallel sub-graphs
-            # due to the Annotated[str, operator.add] in the state definition
-            all_source_str = get_state_value(state, "source_str", "")
-            if all_source_str:
-                # Use shared utility for URL extraction and formatting
-                unique_urls = extract_unique_urls(all_source_str)
-                sources_section = format_sources_section(unique_urls)
-                if sources_section:
-                    report_body += sources_section
-                    logger.debug("Added sources section with %d URLs", len(unique_urls))
-                else:
-                    logger.debug(
-                        "Sources section was empty even though we have %d URLs",
-                        len(unique_urls),
-                    )
-
-                # Optionally include the raw sources string for richer context.
-                # This block can be **very** large, so we expose a dedicated
-                # configuration flag (``include_raw_source_details``) to let
-                # users disable it while still keeping the numbered citations
-                # above.
-                if configurable.include_raw_source_details:
-                    report_body += "\n\n---\n\n## Raw Sources\n\n" + all_source_str
-            else:
-                logger.debug("No source_str collected from any sections")
-        else:
-            logger.debug("Sources not included because include_source_str is False")
+        report_body = _add_sources_to_report(report_body, state, configurable)
 
         logger.info("Returning final report with %d characters", len(report_body))
         return {"final_report": report_body}
 
     except Exception as e:
         logger.error("Error in compile_final_report: %s", str(e), exc_info=True)
-        # Return an error report rather than failing silently
-        error_report = f"""# Research Report Generation Failed
-
-**Topic:** {get_state_value(state, "topic", "Unknown")}
-
-**Error:** {str(e)}
-
-**Sections Planned:** {len(get_state_value(state, "sections", []) or [])}
-**Sections Completed:** {len(get_state_value(state, "completed_sections", []) or [])}
-
-Please check the logs for more details.
-"""
+        error_report = _create_error_report(state, e)
         return {"final_report": error_report}
 
 
@@ -734,10 +853,13 @@ section_builder.add_node("generate_queries", generate_queries)
 section_builder.add_node(
     "search_web",
     search_web,
-    # Retry on transient errors (network issues, API hiccups, etc.)
     retry=RetryPolicy(max_attempts=3),
-)
-section_builder.add_node("write_section", write_section)
+)  # type: ignore[arg-type]
+# Remove monolithic write_section node
+# section_builder.add_node("write_section", write_section)
+# Add new thin nodes for Studio alignment
+section_builder.add_node("draft_section_content", draft_section_content)
+section_builder.add_node("grade_section", grade_section)
 
 
 # Add conditional edge function for the reflection loop
@@ -751,11 +873,14 @@ def should_continue_research(state: SectionResearchState) -> str:
         return END
 
 
-# Add edges with proper conditional logic
+# Rewrite edges to incorporate new nodes
 section_builder.add_edge(START, "generate_queries")
 section_builder.add_edge("generate_queries", "search_web")
-section_builder.add_edge("search_web", "write_section")
-section_builder.add_conditional_edges("write_section", should_continue_research)
+# section_builder.add_edge("search_web", "write_section")
+section_builder.add_edge("search_web", "draft_section_content")
+section_builder.add_edge("draft_section_content", "grade_section")
+# section_builder.add_conditional_edges("write_section", should_continue_research)
+section_builder.add_conditional_edges("grade_section", should_continue_research)  # type: ignore[arg-type]
 
 # Outer graph for initial report plan compiling results from each section --
 
@@ -773,13 +898,9 @@ builder.add_node("compile_final_report", compile_final_report)
 # Add edges
 builder.add_edge(START, "generate_report_plan")
 builder.add_edge("generate_report_plan", "human_feedback")
-builder.add_conditional_edges(  # type: ignore[arg-type]
-    "human_feedback", initiate_section_research
-)
+builder.add_conditional_edges("human_feedback", initiate_section_research)  # type: ignore[arg-type]
 builder.add_edge("build_section_with_web_research", "gather_completed_sections")
-builder.add_conditional_edges(  # type: ignore[arg-type]
-    "gather_completed_sections", initiate_final_section_writing
-)
+builder.add_conditional_edges("gather_completed_sections", initiate_final_section_writing)  # type: ignore[arg-type]
 builder.add_edge("write_final_sections", "compile_final_report")
 builder.add_edge("compile_final_report", END)
 

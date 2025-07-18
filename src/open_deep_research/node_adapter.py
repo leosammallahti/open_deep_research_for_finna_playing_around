@@ -10,6 +10,7 @@ from typing import Any, Dict
 
 from langchain_core.runnables import RunnableConfig
 
+from open_deep_research.feature_compatibility import FeatureCompatibility
 from open_deep_research.pydantic_state import DeepResearchState
 from open_deep_research.unified_models import PlannerResult
 
@@ -73,10 +74,19 @@ class NodeAdapter:
         # ------------------------------------------------------------------
         from open_deep_research.multi_agent import supervisor
 
-        raw: Dict[str, Any] = await supervisor(state, config)  # type: ignore[arg-type]
-        # The supervisor returns a new state; extract *sections*
-        sections = raw.get("sections") if isinstance(raw, dict) else []
-        return PlannerResult(sections=sections or [])
+        try:
+            raw: Dict[str, Any] = await supervisor(state, config)  # type: ignore[arg-type]
+            # The supervisor returns a new state; extract *sections*
+            sections = raw.get("sections") if isinstance(raw, dict) else []
+            return PlannerResult(sections=sections or [])
+        except Exception as exc:  # noqa: BLE001
+            # Defensive fallback – log and delegate to workflow planner
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "multi_agent_planner failed (%s); falling back to workflow planner", exc
+            )
+            return await NodeAdapter.workflow_planner(state, config)
 
     # ------------------------------------------------------------------
     # Research
@@ -139,7 +149,15 @@ class NodeAdapter:
 
         # Honour feature flag – default to *sequential* for backwards-compatibility
         parallel = (
-            cfg.features.get("parallel_research", False) if cfg.features else False
+            (
+                cfg.features.get("parallel_research", False)
+                if cfg.features and FeatureCompatibility.is_allowed(
+                    "parallel_research",
+                    mode="workflow",
+                    active_features=cfg.features,
+                )
+                else False
+            )
         )
 
         section_runnable = legacy_graph.get_node("build_section_with_web_research")  # type: ignore[attr-defined]
@@ -222,18 +240,28 @@ class NodeAdapter:
         # ------------------------------------------------------------------
         from open_deep_research.multi_agent import graph as multi_agent_graph
 
-        # Execute the graph.  The compiled LangGraph object implements the
-        # *Runnable* protocol so we can pass *config* straight through.
-        final_state = await multi_agent_graph.ainvoke(state, config)
+        try:
+            # Execute the graph.  The compiled LangGraph object implements the
+            # *Runnable* protocol so we can pass *config* straight through.
+            final_state = await multi_agent_graph.ainvoke(state, config)
 
-        # The graph returns an updated state (MultiAgentReportState) that
-        # contains the completed sections and, optionally, accumulated
-        # source strings.  We defensively access the attributes to remain
-        # compatible with future schema tweaks.
-        completed_sections = getattr(final_state, "completed_sections", [])
-        source_str = getattr(final_state, "source_str", "")
+            # The graph returns an updated state (MultiAgentReportState) that
+            # contains the completed sections and, optionally, accumulated
+            # source strings.  We defensively access the attributes to remain
+            # compatible with future schema tweaks.
+            completed_sections = getattr(final_state, "completed_sections", [])
+            source_str = getattr(final_state, "source_str", "")
 
-        return ResearchResult(
-            completed_sections=completed_sections,  # type: ignore[arg-type]
-            source_str=source_str,
-        )
+            return ResearchResult(
+                completed_sections=completed_sections,  # type: ignore[arg-type]
+                source_str=source_str,
+            )
+        except Exception as exc:  # noqa: BLE001
+            # Log and gracefully degrade to the single‐workflow researcher
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "multi_agent_researcher failed (%s); falling back to workflow researcher",
+                exc,
+            )
+            return await NodeAdapter.workflow_researcher(state, config)

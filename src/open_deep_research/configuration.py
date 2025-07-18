@@ -75,13 +75,13 @@ class SearchAPI(Enum):
     NONE = "none"
 
 
+# BaseConfiguration definition
 @dataclass(kw_only=True)
 class BaseConfiguration:
     """Base configuration with common fields."""
 
     report_structure: str = DEFAULT_REPORT_STRUCTURE
     search_api: SearchAPI = SearchAPI.TAVILY
-    search_api_config: Dict[str, Any] | None = None
     process_search_results: Literal["summarize", "split_and_rerank"] | None = None
     summarization_model_provider: str | None = None
     summarization_model: str | None = None

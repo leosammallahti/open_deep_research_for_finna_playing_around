@@ -314,7 +314,7 @@ thread = {"configurable": {"thread_id": str(uuid.uuid4()),
 
 ## 3. Unified Typed Workflow (`src/open_deep_research/workflow/`)
 
-**Status: Experimental – under active migration.**  This path unifies the
+**Status: ✅ Complete and Functional**  This path unifies the
 graph-based and multi-agent approaches under one typed LangGraph powered by
 immutable `DeepResearchState`.
 

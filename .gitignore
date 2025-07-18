@@ -76,3 +76,7 @@ temp/
 
 # Remove legacy duplicate repo
 /original_repo/
+
+# Local startup scripts with machine-specific paths
+start_langgraph.bat
+start_langgraph.ps1

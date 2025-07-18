@@ -19,7 +19,18 @@ from langgraph.types import Send
 from pydantic import BaseModel, Field
 
 from open_deep_research.configuration import MultiAgentConfiguration
-from open_deep_research.prompts import RESEARCH_INSTRUCTIONS, SUPERVISOR_INSTRUCTIONS
+
+# (The previous inline ReportState and SectionState definitions have been removed in favor of the
+# Pydantic-based models that already exist in ``open_deep_research.pydantic_state``.)
+# --------------------------------------------------------------------------- #
+# Model configuration and helper utilities that were accidentally removed
+# --------------------------------------------------------------------------- #
+# Model configuration for handling different model capabilities
+# DELETE the entire MODEL_CONFIGS dict and get_model_config function
+from open_deep_research.core.model_utils import (
+    bind_tools_with_capability as bind_tools_with_model_support,
+)
+from open_deep_research.prompt_loader import load_prompt
 
 ## State
 from open_deep_research.pydantic_state import (
@@ -37,83 +48,6 @@ from open_deep_research.utils import (
     summarize_search_results,
     truncate_messages_for_context,
 )
-
-# (The previous inline ReportState and SectionState definitions have been removed in favor of the
-# Pydantic-based models that already exist in ``open_deep_research.pydantic_state``.)
-
-# --------------------------------------------------------------------------- #
-# Model configuration and helper utilities that were accidentally removed
-# --------------------------------------------------------------------------- #
-
-# Model configuration for handling different model capabilities
-MODEL_CONFIGS: dict[str, dict[str, Any]] = {
-    "deepseek-reasoner": {
-        "supports_tool_choice": False,
-        "max_context": 65536,
-        "safe_context": 60000,
-    },
-    "deepseek-chat": {
-        "supports_tool_choice": True,
-        "max_context": 65536,
-        "safe_context": 60000,
-    },
-    "gpt-4o": {
-        "supports_tool_choice": True,
-        "max_context": 128000,
-        "safe_context": 120000,
-    },
-    "gpt-4": {"supports_tool_choice": True, "max_context": 8192, "safe_context": 7000},
-    "gpt-3.5-turbo": {
-        "supports_tool_choice": True,
-        "max_context": 4096,
-        "safe_context": 3500,
-    },
-    "claude-3-5-sonnet-20240620": {
-        "supports_tool_choice": True,
-        "max_context": 200000,
-        "safe_context": 190000,
-    },
-    "claude-3-haiku-20240307": {
-        "supports_tool_choice": True,
-        "max_context": 200000,
-        "safe_context": 190000,
-    },
-    "llama-3.1-70b-versatile": {
-        "supports_tool_choice": True,
-        "max_context": 131072,
-        "safe_context": 120000,
-    },
-}
-
-
-def get_model_config(model_name: str) -> dict[str, Any]:
-    """Return configuration for the given *model_name*.
-
-    For unknown models we assume tool support and a 4K context window.
-    """
-    model_key = model_name.split(":")[-1] if ":" in model_name else model_name
-    return MODEL_CONFIGS.get(
-        model_key,
-        {"supports_tool_choice": True, "max_context": 4096, "safe_context": 3500},
-    )
-
-
-def bind_tools_with_model_support(
-    llm: Any,
-    tools: list[BaseTool],
-    model_name: str,
-    *,
-    parallel_tool_calls: bool = False,
-) -> Any:
-    """Bind *tools* to *llm* considering model tool-call capabilities."""
-    model_config = get_model_config(model_name)
-
-    if model_config["supports_tool_choice"]:
-        return llm.bind_tools(
-            tools, parallel_tool_calls=parallel_tool_calls, tool_choice="any"
-        )
-    return llm.bind_tools(tools, parallel_tool_calls=parallel_tool_calls)
-
 
 # --------------------------------------------------------------------------- #
 # Search tool factory
@@ -206,6 +140,12 @@ class FinishReport(BaseModel):
     """Finish the report."""
 
 
+@tool
+def ask_question(query: str) -> str:
+    """Ask user for clarification."""
+    return input(f"Clarification: {query}")
+
+
 async def _load_mcp_tools(
     config: RunnableConfig,
     existing_tool_names: set[str],
@@ -244,9 +184,9 @@ async def get_supervisor_tools(config: RunnableConfig) -> list[BaseTool]:
     """Get supervisor tools based on configuration"""
     configurable = MultiAgentConfiguration.from_runnable_config(config)
     search_tool = get_search_tool(config)
-    tools = [tool(Sections), tool(Introduction), tool(Conclusion), tool(FinishReport)]
+    tools = [tool(Sections), tool(Introduction), tool(Conclusion), tool(FinishReport), tool(ask_question)]
     if configurable.ask_for_clarification:
-        tools.append(tool(Question))
+        tools.append(ask_question)
     if search_tool is not None:
         tools.append(search_tool)  # Add search tool, if available
     existing_tool_names = {cast("BaseTool", tool).name for tool in tools}
@@ -306,7 +246,7 @@ async def supervisor(state: ReportState, config: RunnableConfig):
     )
 
     # Get system prompt
-    system_prompt = SUPERVISOR_INSTRUCTIONS.replace("{today}", get_today_str())
+    system_prompt = load_prompt("supervisor").replace("{today}", get_today_str())
     if configurable.mcp_prompt:
         system_prompt += f"\n\n{configurable.mcp_prompt}"
 
@@ -504,7 +444,7 @@ async def research_agent(state: SectionState, config: RunnableConfig):
     # Get tools based on configuration
     research_tool_list = await get_research_tools(config)
     system_prompt = (
-        RESEARCH_INSTRUCTIONS.replace("{section_description}", state.section)
+        load_prompt("researcher").replace("{section_description}", state.section)
         .replace("{number_of_queries}", str(configurable.number_of_queries))
         .replace("{today}", get_today_str())
     )

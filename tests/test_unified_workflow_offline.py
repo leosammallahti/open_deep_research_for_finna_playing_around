@@ -1,4 +1,3 @@
-import os
 from typing import cast
 
 import pytest
@@ -10,10 +9,8 @@ from open_deep_research.workflow.unified_workflow import unified_planner_graph
 
 
 @pytest.mark.asyncio
-async def test_unified_workflow_offline_stub():
-    """Ensure workflow still succeeds when search_api is NONE and fast flag off."""
-    # Enable fast mode environment variable to utilize stub planner/researcher
-    os.environ["ODR_FAST_TEST"] = "1"
+async def test_unified_workflow_offline_stub(fast_mode):
+    """Ensure workflow succeeds when search_api is NONE in fast mode."""
 
     # Override configuration to disable web search explicitly
     cfg = cast(

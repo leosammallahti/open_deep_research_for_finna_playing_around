@@ -19,6 +19,13 @@ import streamlit as st
 # execution later.
 from open_deep_research.core.settings import settings
 
+
+def load_css(file_name):
+    """Load a CSS file into the Streamlit app."""
+    with open(file_name, encoding="utf-8") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+
 # *Fail fast*: if the settings are invalid the following call will raise a
 # ValueError and Streamlit will display the traceback at startup.
 try:
@@ -31,6 +38,8 @@ except Exception as e:
 # Add the src directory to Python path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
+from langchain_core.runnables import RunnableConfig
+
 from open_deep_research.configuration import (
     COMPREHENSIVE_REPORT_STRUCTURE,
     DEFAULT_REPORT_STRUCTURE,
@@ -41,7 +50,6 @@ from open_deep_research.core.model_utils import trace_config
 from open_deep_research.dependency_manager import (
     SearchProvider,
     get_available_providers,
-    get_status_report,
 )
 from open_deep_research.exceptions import OutOfBudgetError
 from open_deep_research.graph import get_state_value, graph
@@ -76,6 +84,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Load custom CSS
+load_css("style.css")
+
 # Show environment loading error if there was one
 if ENV_LOAD_ERROR:
     st.error(f"⚠️ **Environment Configuration Issue**: {ENV_LOAD_ERROR}")
@@ -95,45 +106,6 @@ OPENAI_API_KEY=your_openai_key_here
             language="bash",
         )
 
-# Custom CSS for better styling
-st.markdown(
-    """
-<style>
-    .main {
-        padding-top: 2rem;
-    }
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        font-weight: bold;
-        border-radius: 5px;
-        border: none;
-        padding: 0.5rem 1rem;
-        transition: all 0.3s;
-    }
-    .stButton>button:hover {
-        background-color: #45a049;
-        transform: translateY(-2px);
-    }
-    .report-container {
-        background-color: #f0f2f6;
-        border-radius: 10px;
-        padding: 2rem;
-        margin-top: 2rem;
-    }
-    h1 {
-        color: #1e3a8a;
-    }
-
-    /* Hide the link icon that Streamlit automatically adds to headers */
-    div[data-testid="stHeading"] a {
-        display: none;
-    }
-</style>
-""",
-    unsafe_allow_html=True,
-)
-
 # Initialize session state
 if "report" not in st.session_state:
     st.session_state.report = None
@@ -144,17 +116,80 @@ if "research_task" not in st.session_state:
 if "should_stop_research" not in st.session_state:
     st.session_state.should_stop_research = False
 
-# Header
-st.title("🔍 Open Deep Research")
+# Professional Header
 st.markdown(
-    "**AI-powered research assistant** that helps you create comprehensive reports on any topic"
+    """
+    <div class="app-header">
+        <h1>Open Deep Research</h1>
+        <p class="app-subtitle">Advanced AI-powered research assistant that helps you create comprehensive reports on any topic</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
-# Sidebar configuration
-with st.sidebar:
-    st.header("⚙️ Configuration")
+# Define research_topic before any usage to avoid linter errors.
+col1, col2 = st.columns([2, 1])
 
-    # --- Search Provider Selection ---
+with col1:
+    research_topic = st.text_area(
+        "Research topic",
+        placeholder="For example:\n• The impact of artificial intelligence on healthcare transformation\n• Climate change mitigation strategies for urban environments\n• The evolution and future of quantum computing technologies",
+        height=140,
+        key="research_topic_input",
+    )
+    button_col1, button_col2 = st.columns([1, 1])
+    with button_col1:
+        if st.button(
+            "Start Research",
+            type="primary",
+            disabled=st.session_state.research_in_progress,
+            use_container_width=True,
+        ):
+            if not research_topic:
+                st.error("⚠️ Please enter a research topic!")
+            else:
+                st.session_state.research_in_progress = True
+                st.session_state.report = None
+                st.session_state.should_stop_research = False
+    with button_col2:
+        if st.button(
+            "Stop Research",
+            disabled=not st.session_state.research_in_progress,
+            use_container_width=True,
+        ):
+            st.session_state.should_stop_research = True
+            st.session_state.research_in_progress = False
+            if "research_task" in st.session_state and st.session_state.research_task:
+                try:
+                    st.session_state.research_task.cancel()
+                except Exception:
+                    pass
+            st.warning("🛑 Research stopped by user. You can start a new research session.")
+            st.rerun()
+
+# Improved 'How it works' info box for a more professional look
+with col2:
+    st.markdown(
+        """
+        <div style="background: var(--muted); border: 1px solid var(--border); border-radius: 0.5rem; box-shadow: 0 2px 8px var(--shadow); padding: 2rem 1.5rem 2rem 1.5rem; margin-top: 0.5rem;">
+            <div style="font-size: 1.125rem; font-weight: 600; color: var(--foreground); margin-bottom: 1.25rem; letter-spacing: 0.01em;">How it works</div>
+            <ol style="margin: 0; padding-left: 1.5rem;">
+                <li style="font-size: 0.95rem; margin-bottom: 1.1rem; line-height: 1.6;"><strong>Enter your topic</strong><br><span style="font-weight: 400; color: hsla(220, 8%, 92%, 0.85);">Be specific about what you want to research</span></li>
+                <li style="font-size: 0.95rem; margin-bottom: 1.1rem; line-height: 1.6;"><strong>Configure settings</strong><br><span style="font-weight: 400; color: hsla(220, 8%, 92%, 0.85);">Choose search providers and report preferences</span></li>
+                <li style="font-size: 0.95rem; margin-bottom: 1.1rem; line-height: 1.6;"><strong>Start research</strong><br><span style="font-weight: 400; color: hsla(220, 8%, 92%, 0.85);">AI will search, analyze, and synthesize information</span></li>
+                <li style="font-size: 0.95rem; margin-bottom: 0; line-height: 1.6;"><strong>Get your report</strong><br><span style="font-weight: 400; color: hsla(220, 8%, 92%, 0.85);">Receive a well-structured, comprehensive report</span></li>
+            </ol>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# Professional sidebar configuration
+with st.sidebar:
+    # Sidebar header
+    st.markdown("## Configuration")
+    st.markdown("Configure your research parameters")
+    
     # Use the SearchProvider enum directly instead of manual mapping
     PROVIDER_DISPLAY_NAMES = {
         SearchProvider.GOOGLE: "Google Search",
@@ -175,10 +210,16 @@ with st.sidebar:
         if provider in PROVIDER_DISPLAY_NAMES
     ]
 
-    if len(available_provider_names) < len(PROVIDER_DISPLAY_NAMES):
-        st.warning("⚠️ Some search providers are not installed.")
-        with st.expander("📋 View Provider Status"):
-            st.text(get_status_report())
+    # Get the provider enum value from the display name
+    def get_provider_api(provider_name):
+        return next(
+            (
+                provider.value
+                for provider, name in PROVIDER_DISPLAY_NAMES.items()
+                if name == provider_name
+            ),
+            "duckduckgo",
+        )
 
     # Determine default search provider from environment or fallback
     default_search_api = os.environ.get("SEARCH_API", "tavily")
@@ -202,50 +243,120 @@ with st.sidebar:
         available_provider_names = ["Tavily"]
         st.warning("⚠️ No search providers are configured. Using Tavily as fallback.")
 
-    search_provider_name = st.selectbox(
-        "🔎 Search Provider",
-        options=available_provider_names,
-        index=max(0, default_index),
-        help="Choose a search engine. Configure with SEARCH_API in your .env file.",
-    )
+    # === CLEAN CARD-STYLE CONFIGURATION OPTIONS ===
+    # Search Provider (always visible)
+    with st.container():
+        st.markdown('<div class="config-box">', unsafe_allow_html=True)
+        search_provider_name = st.selectbox(
+            "🔎 Search Provider",
+            options=available_provider_names,
+            index=max(0, default_index),
+            help="Configure with SEARCH_API in your .env file.",
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+    search_provider_api = get_provider_api(search_provider_name)
 
-    # Get the provider enum value from the display name
-    search_provider_api = next(
-        (
-            provider.value
-            for provider, name in PROVIDER_DISPLAY_NAMES.items()
-            if name == search_provider_name
-        ),
-        "duckduckgo",
-    )
+    # Report Style Card (always visible - core user choice)
+    with st.container():
+        st.markdown('<div class="config-box">', unsafe_allow_html=True)
+        report_style_options = {
+            "Concise": DEFAULT_REPORT_STRUCTURE,
+            "Comprehensive": COMPREHENSIVE_REPORT_STRUCTURE,
+            "Executive Summary": EXECUTIVE_SUMMARY_STRUCTURE,
+        }
+        report_style_key = st.selectbox(
+            "📊 Report Style",
+            options=list(report_style_options.keys()),
+            index=0,
+            help="Controls the length and detail of the final report.",
+        )
+        report_structure_prompt = report_style_options[report_style_key]
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- Advanced Settings -------------------------------------------------
-    with st.expander("🔧 Advanced settings"):
-        adv_search_budget = st.number_input(
-            "Search budget (credits)",
-            min_value=1,
-            value=int(os.environ.get("SEARCH_BUDGET", 100)),
-        )
-        adv_max_search_depth = st.slider(
-            "Max search depth",
-            min_value=1,
-            max_value=5,
-            value=int(os.environ.get("MAX_SEARCH_DEPTH", 2)),
-        )
-        adv_recursion_limit = st.number_input(
-            "LangGraph recursion limit",
-            min_value=50,
-            value=int(os.environ.get("RECURSION_LIMIT", 100)),
-        )
+    # Advanced settings (collapsed by default)
+    with st.expander("⚙️ Advanced Settings", expanded=False):
+        # Search Budget Card
+        with st.container():
+            st.markdown('<div class="config-box">', unsafe_allow_html=True)
+            adv_search_budget = st.number_input(
+                "💰 Search Budget",
+                min_value=1,
+                value=int(os.environ.get("SEARCH_BUDGET", 100)),
+                help="Maximum number of search credits to use for this research session",
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # Max Search Depth Card
+        with st.container():
+            st.markdown('<div class="config-box">', unsafe_allow_html=True)
+            adv_max_search_depth = st.slider(
+                "🔍 Max Search Depth",
+                min_value=1,
+                max_value=5,
+                value=int(os.environ.get("MAX_SEARCH_DEPTH", 2)),
+                help="Higher values mean more thorough but slower searches",
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # Recursion Limit Card
+        with st.container():
+            st.markdown('<div class="config-box">', unsafe_allow_html=True)
+            adv_recursion_limit = st.number_input(
+                "🔄 LangGraph Recursion Limit",
+                min_value=50,
+                value=int(os.environ.get("RECURSION_LIMIT", 100)),
+                help="Maximum number of processing steps the AI can take",
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # Number of Queries Card (stays in Advanced Settings)
+        with st.container():
+            st.markdown('<div class="config-box">', unsafe_allow_html=True)
+            default_queries = int(os.environ.get("NUMBER_OF_QUERIES", 1))
+            number_of_queries = st.slider(
+                "🔢 Search Queries",
+                min_value=1,
+                max_value=5,
+                value=default_queries,
+                help="More queries = more comprehensive research. Configure with NUMBER_OF_QUERIES in your .env file.",
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # Ask for Clarification Card
+        with st.container():
+            st.markdown('<div class="config-box">', unsafe_allow_html=True)
+            ask_for_clarification = st.checkbox(
+                "❓ Allow AI to ask clarifying questions about your topic",
+                value=False,
+                help="Enable if you want the AI to ask for more details about your topic",
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # Include Sources Card
+        with st.container():
+            st.markdown('<div class="config-box">', unsafe_allow_html=True)
+            include_sources = st.checkbox(
+                "📚 Include sources and citations in the final report",
+                value=True,
+                help="Include numbered citations and source URLs in the final report",
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # Include Raw Sources Card
+        with st.container():
+            st.markdown('<div class="config-box">', unsafe_allow_html=True)
+            include_raw_sources = st.checkbox(
+                "📄 Include full raw sources content (creates very large reports)",
+                value=False,
+                help="If enabled, the full unprocessed search results will be appended under a 'Raw Sources' section.",
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
 
     st.session_state.adv_settings = {
         "search_budget": adv_search_budget,
         "max_search_depth": adv_max_search_depth,
         "recursion_limit": adv_recursion_limit,
     }
-
-    # --- Model Selection ---
-    st.subheader("🤖 AI Models")
 
     # Get only available model combos
     available_combos = get_available_model_combos()
@@ -265,13 +376,18 @@ with st.sidebar:
     }
     combo_options["custom"] = "🧑‍🔧 Custom"
 
-    selected_combo_key = st.selectbox(
-        "Model Combination",
-        options=list(combo_options.keys()),
-        format_func=lambda key: combo_options[key],
-        index=0,
-        help="Select a curated set of models for different tasks, or choose 'Custom' to configure them yourself.",
-    )
+    # Model Combination Card
+    with st.container():
+        st.markdown('<div class="config-box">', unsafe_allow_html=True)
+        selected_combo_key = st.selectbox(
+            "🤖 Model Combination",
+            options=list(combo_options.keys()),
+            format_func=lambda key: combo_options[key],
+            index=0,
+            help="Select a curated set of models for different tasks, or choose 'Custom' to configure them yourself.",
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+
 
     if selected_combo_key == "custom":
         # Build model options dynamically per role using registry with API key filtering
@@ -290,36 +406,43 @@ with st.sidebar:
             )
             st.stop()
 
-        # Planner (Supervisor) Model
-        default_planner = os.environ.get("PLANNER_MODEL", planner_model_options[0])
-        if default_planner not in planner_model_options:
-            default_planner = planner_model_options[0]
-        supervisor_model = st.selectbox(
-            "Planner / Supervisor Model",
-            options=planner_model_options,
-            index=planner_model_options.index(default_planner),
-            help="Model that plans / coordinates the report. Configure with PLANNER_MODEL in your .env file.",
-        )
+        # Planner Model Card
+        with st.container():
+            st.markdown('<div class="config-box">', unsafe_allow_html=True)
+            default_planner = os.environ.get("PLANNER_MODEL", planner_model_options[0])
+            if default_planner not in planner_model_options:
+                default_planner = planner_model_options[0]
+            supervisor_model = st.selectbox(
+                "🎯 Planner Model",
+                options=planner_model_options,
+                index=planner_model_options.index(default_planner),
+                help="Model that plans and coordinates the report. Configure with PLANNER_MODEL in your .env file.",
+            )
+            st.markdown('</div>', unsafe_allow_html=True)
 
-        # Writer (Researcher) Model
-        default_writer = os.environ.get("WRITER_MODEL", writer_model_options[0])
-        if default_writer not in writer_model_options:
-            default_writer = writer_model_options[0]
-        researcher_model = st.selectbox(
-            "Writer / Researcher Model",
-            options=writer_model_options,
-            index=writer_model_options.index(default_writer),
-            help="Model that writes sections. Configure with WRITER_MODEL in your .env file.",
-        )
-
-        # Add a warning if the writer model doesn't support tool choice
-        if not supports_tool_choice(researcher_model):
-            st.warning(
-                f"**Warning:** The selected writer model (`{researcher_model}`) does not support tool calling. This may lead to errors or poor performance as it cannot reliably generate structured output."
+        # Writer Model Card
+        with st.container():
+            st.markdown('<div class="config-box">', unsafe_allow_html=True)
+            default_writer = os.environ.get("WRITER_MODEL", writer_model_options[0])
+            if default_writer not in writer_model_options:
+                default_writer = writer_model_options[0]
+            researcher_model = st.selectbox(
+                "✍️ Writer Model",
+                options=writer_model_options,
+                index=writer_model_options.index(default_writer),
+                help="Model that writes sections. Configure with WRITER_MODEL in your .env file.",
             )
 
-        # Optional summarizer drop-down if users want custom summarization model
-        with st.expander("📝 Summarisation Model (optional)"):
+            # Add a warning if the writer model doesn't support tool choice
+            if not supports_tool_choice(researcher_model):
+                st.warning(
+                    f"**Warning:** The selected writer model (`{researcher_model}`) does not support tool calling. This may lead to errors or poor performance as it cannot reliably generate structured output."
+                )
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # Summarizer Model Card
+        with st.container():
+            st.markdown('<div class="config-box">', unsafe_allow_html=True)
             summarizer_model_options = (
                 get_available_models("summarizer") or writer_model_options
             )
@@ -329,11 +452,12 @@ with st.sidebar:
             if default_summarizer not in summarizer_model_options:
                 default_summarizer = summarizer_model_options[0]
             summarizer_model = st.selectbox(
-                "Summarizer Model",
+                "📝 Summarizer Model",
                 options=summarizer_model_options,
                 index=summarizer_model_options.index(default_summarizer),
                 help="Model used to summarise large search results. Configure with SUMMARIZER_MODEL in your .env file.",
             )
+            st.markdown('</div>', unsafe_allow_html=True)
     else:
         # Use a predefined combo
         combo = available_combos[selected_combo_key]
@@ -343,100 +467,6 @@ with st.sidebar:
         st.caption(
             f"Using **{combo['planner']}** for planning and **{combo['writer']}** for writing."
         )
-
-    # --- Advanced Settings ---
-    with st.expander("🔧 Advanced Settings"):
-        # Report Length / Style
-        report_style_options = {
-            "Concise": DEFAULT_REPORT_STRUCTURE,
-            "Comprehensive": COMPREHENSIVE_REPORT_STRUCTURE,
-            "Executive Summary": EXECUTIVE_SUMMARY_STRUCTURE,
-        }
-        report_style_key = st.selectbox(
-            "Report Style",
-            options=list(report_style_options.keys()),
-            index=0,
-            help="Controls the length and detail of the final report.",
-        )
-        report_structure_prompt = report_style_options[report_style_key]
-
-        # Number of Queries
-        default_queries = int(os.environ.get("NUMBER_OF_QUERIES", 1))
-        number_of_queries = st.slider(
-            "Number of search queries per section",
-            min_value=1,
-            max_value=5,
-            value=default_queries,
-            help="More queries = more comprehensive research. Configure with NUMBER_OF_QUERIES in your .env file.",
-        )
-
-        ask_for_clarification = st.checkbox(
-            "Allow AI to ask clarifying questions",
-            value=False,
-            help="Enable if you want the AI to ask for more details about your topic",
-        )
-
-        include_sources = st.checkbox(
-            "Include sources and citations",
-            value=True,
-            help="Include numbered citations and source URLs in the final report",
-        )
-
-        include_raw_sources = st.checkbox(
-            "Include full raw sources content (very large)",
-            value=False,
-            help="If enabled, the full unprocessed search results will be appended under a 'Raw Sources' section. This can exceed tens of thousands of characters.",
-        )
-
-# Main content area
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    st.header("📝 Research Topic")
-    research_topic = st.text_area(
-        "What would you like to research?",
-        placeholder="Enter your research topic here... For example:\n- The impact of artificial intelligence on healthcare\n- Climate change mitigation strategies\n- The history of quantum computing",
-        height=150,
-    )
-
-with col2:
-    st.header("ℹ️ How it works")
-    st.info("""
-    1. **Enter your topic** - Be specific about what you want to research
-    2. **Configure settings** - Choose search provider and report preferences
-    3. **Start research** - The AI will search, analyze, and write a comprehensive report
-    4. **Get your report** - Receive a well-structured report with introduction, body sections, and conclusion
-    """)
-
-# Research buttons
-col1, col2 = st.columns([1, 1])
-with col1:
-    if st.button(
-        "🚀 Start Research",
-        type="primary",
-        disabled=st.session_state.research_in_progress,
-    ):
-        if not research_topic:
-            st.error("⚠️ Please enter a research topic!")
-        else:
-            st.session_state.research_in_progress = True
-            st.session_state.report = None
-            st.session_state.should_stop_research = False
-
-with col2:
-    if st.button("⏹️ Stop Research", disabled=not st.session_state.research_in_progress):
-        st.session_state.should_stop_research = True
-        st.session_state.research_in_progress = False
-
-        # Cancel the research task if it exists
-        if "research_task" in st.session_state and st.session_state.research_task:
-            try:
-                st.session_state.research_task.cancel()
-            except Exception:
-                pass  # Task might already be done or cancelled
-
-        st.warning("🛑 Research stopped by user. You can start a new research session.")
-        st.rerun()
 
 # Run research if button was clicked
 if st.session_state.research_in_progress:
@@ -519,8 +549,33 @@ if st.session_state.research_in_progress:
                 status_text.text("Planning report structure...")
                 progress_bar.progress(20)
 
-                # Prepare live status placeholders
+                # Prepare live status placeholders with professional styling
                 live_status = st.status("Running research…", state="running")
+                
+                # Professional metrics display
+                st.markdown(
+                    """
+                    <div class="research-progress">
+                        <h3>Research Progress</h3>
+                        <div class="metric-container" id="metrics-container">
+                            <div class="metric-card">
+                                <div class="metric-value" id="iteration-value">0</div>
+                                <div class="metric-label">Iterations</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value" id="credits-value">0</div>
+                                <div class="metric-label">Credits Used</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-value" id="elapsed-value">0s</div>
+                                <div class="metric-label">Elapsed Time</div>
+                            </div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                
                 iteration_placeholder = st.empty()
                 credits_placeholder = st.empty()
                 elapsed_placeholder = st.empty()
@@ -530,15 +585,20 @@ if st.session_state.research_in_progress:
                 # Stream graph events so we can update the UI progressively
                 # Use stream_mode="values" to get the full state at each step, not just updates
                 latest_state = None
+                
+                # Prepare the configuration for astream
+                trace_details = trace_config("streamlit-session")
+                astream_config: RunnableConfig = {
+                    "callbacks": trace_details.get("callbacks", []),
+                    "tags": trace_details.get("tags", []),
+                    "metadata": trace_details.get("metadata", {}),
+                    "configurable": config["configurable"],
+                    "recursion_limit": st.session_state.adv_settings["recursion_limit"],
+                }
+
                 async for step_state in graph.astream(
                     {"topic": research_topic},
-                    config={
-                        **trace_config("streamlit-session"),
-                        "configurable": config["configurable"],
-                        "recursion_limit": st.session_state.adv_settings[
-                            "recursion_limit"
-                        ],
-                    },
+                    config=astream_config,
                     stream_mode="values",  # Get full state, not just updates
                 ):
                     latest_state = step_state
@@ -552,6 +612,7 @@ if st.session_state.research_in_progress:
 
                     elapsed = int(time.time() - start_ts)
 
+                    # Update metrics with simple text display
                     iteration_placeholder.text(f"🔄 Iteration: {iter_count}")
                     if credits_remaining is not None:
                         credits_used = budget - credits_remaining
@@ -583,10 +644,12 @@ if st.session_state.research_in_progress:
                     elif isinstance(final_state, dict):
                         f.write(f"State keys: {list(final_state.keys())}\n")
                     f.write(f"Final report found: {bool(final_report)}\n")
-                    f.write(
-                        f"Final report length: {len(final_report) if final_report else 0}\n"
+                    final_report_len = (
+                        len(final_report) if final_report is not None else 0
                     )
-                    f.write(f"Sections found: {len(sections)}\n")
+                    f.write(f"Final report length: {final_report_len}\n")
+                    sections_len = len(sections) if sections is not None else 0
+                    f.write(f"Sections found: {sections_len}\n")
 
                 if final_report:
                     return final_report
@@ -774,36 +837,52 @@ if st.session_state.research_in_progress:
                 traceback.print_exc()
                 st.error("Check streamlit_error.log for full details")
 
-# Display the report if available
+# Professional report display
 if st.session_state.report:
-    st.markdown("---")
-    st.header("📊 Research Report")
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    
+    # Professional report header
+    st.markdown(
+        """
+        <div class="primary-card">
+            <h2>Research Report</h2>
+            <p style="color: hsla(220, 8%, 92%, 0.7); font-size: 0.95rem; margin-bottom: 1.5rem;">
+                Your comprehensive research report is ready.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-    # Add download button
+    # Professional action buttons
     col1, col2, col3 = st.columns([1, 1, 4])
     with col1:
         st.download_button(
-            label="📥 Download Report (Markdown)",
+            label="Download Report (Markdown)",
             data=st.session_state.report,
             file_name="research_report.md",
             mime="text/markdown",
         )
     with col2:
-        if st.button("🔄 New Research"):
+        if st.button("New Research"):
             st.session_state.report = None
             st.rerun()
 
-    # Display report
+    # Display report with professional styling
     st.markdown(st.session_state.report)
 
-# Footer
-st.markdown("---")
+# Professional footer
+st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown(
     """
-<div style='text-align: center; color: #666;'>
-    <p>Powered by Open Deep Research | Built with ❤️ using LangGraph and Streamlit</p>
-    <p style='font-size: 0.8em;'>Note: Make sure you have configured your API keys in the .env file</p>
-</div>
-""",
+    <div style='text-align: center; padding: 2rem 0; border-top: 1px solid var(--border); margin-top: 3rem;'>
+        <p style='color: hsla(220, 8%, 92%, 0.6); font-size: 0.875rem; margin-bottom: 0.5rem;'>
+            Powered by Open Deep Research | Built with LangGraph and Streamlit
+        </p>
+        <p style='color: hsla(220, 8%, 92%, 0.5); font-size: 0.75rem;'>
+            Configure your API keys in the .env file for optimal performance
+        </p>
+    </div>
+    """,
     unsafe_allow_html=True,
 )

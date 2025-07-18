@@ -20,11 +20,11 @@ async def unified_researcher(state: DeepResearchState, config: RunnableConfig):
         else {}
     )
 
+    # Precedence: config override > feature flag > state default
     mode = (
-        getattr(state, "execution_mode", None)
-        or cfg_mapping.get("mode")
+        cfg_mapping.get("mode")
         or ("multi_agent" if features_map.get("mcp_support") else None)
-        or "workflow"
+        or state.execution_mode
     )
 
     if mode == "multi_agent":

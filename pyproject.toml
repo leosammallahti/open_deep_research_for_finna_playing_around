@@ -11,33 +11,23 @@ requires-python = ">=3.10"
 dependencies = [
     # Pin core LangChain & LangGraph libraries to a safe minor series to
     # prevent silent API breakage (e.g. callback signature changes).
-    "langgraph~=0.2.55",              # any 0.2.x >=.55 <0.3.0
-    "langchain-community~=0.3.9",    # any 0.3.x >=.9 <0.4.0
-    "langchain-openai~=0.3.7",       # any 0.3.x
-    "langchain-anthropic~=0.3.15",   # any 0.3.x
+    "langgraph~=0.3.5",              # any 0.3.x >=.5 <0.4.0
+    "langchain-community~=0.3.10",    # any 0.3.x >=.10 <0.4.0
+    "langchain-openai~=0.3.8",       # any 0.3.x
+    "langchain-anthropic~=0.3.16",   # any 0.3.x
     "langchain-mcp-adapters~=0.1.6", # any 0.1.x
     "langchain-deepseek~=0.1.2",     # any 0.1.x
-    "langchain-tavily",
+    "langgraph-cli[inmem]>=0.3.1",   # keep CLI optionality in core to aid quick local runs
     "langchain-groq>=0.2.4",
     "openai>=1.61.0",
-    "tavily-python>=0.5.0",
-    "arxiv>=2.1.3",
-    "pymupdf>=1.25.3",
-    "xmltodict>=0.14.2",
-    "linkup-sdk>=0.2.3",
-    "duckduckgo-search>=3.0.0",
-    "exa-py>=1.8.8",
+    # Generic helpers
     "requests>=2.32.3",
     "beautifulsoup4==4.13.3",
     "python-dotenv>=1.0.1",
     "pytest",
     "httpx>=0.24.0",
     "markdownify>=0.11.6",
-    "azure-identity>=1.21.0",
-    "azure-search>=1.0.0b2",
-    "azure-search-documents>=11.5.2",
     "rich>=13.0.0",
-    "langgraph-cli[inmem]>=0.3.1",
     "langsmith>=0.3.37",
     "structlog>=24.1.0",
     "pydantic-settings>=2.2.1",
@@ -53,6 +43,45 @@ dev = [
     "types-requests",
 ]
 
+# --- Search provider extras -------------------------------------------------
+# Each group installs only what that provider uniquely requires.
+# Users can install multiple providers via pip install open_deep_research[exa,...]
+
+tavily = [
+    "langchain-tavily",
+    "tavily-python>=0.5.0",
+]
+
+arxiv = [
+    "arxiv>=2.1.3",
+    "pymupdf>=1.25.3",
+]
+
+exa = ["exa-py>=1.8.8"]
+
+duckduckgo = ["duckduckgo-search>=3.0.0"]
+
+pubmed = ["xmltodict>=0.14.2"]
+
+linkup = ["linkup-sdk>=0.2.3"]
+
+google = ["googlesearch-python>=1.2.3"]
+
+azure = [
+    "azure-identity>=1.21.0",
+    "azure-search>=1.0.0b2",
+    "azure-search-documents>=11.5.2",
+]
+
+# Perplexity relies only on core 'requests', so it has no extra deps but we
+# expose an empty extras group for consistency.
+perplexity = []
+
+# Meta-extra to grab everything in one shot for power users / CI images.
+all-search = [
+    "open_deep_research[tavily,arxiv,exa,duckduckgo,pubmed,linkup,google,azure,perplexity]",
+]
+
 [build-system]
 requires = ["setuptools>=73.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -66,6 +95,7 @@ packages = ["open_deep_research", "tests"]
 
 [tool.setuptools.package-data]
 "*" = ["py.typed"]
+"open_deep_research.prompt_files" = ["*.md"]
 
 [tool.ruff]
 lint.select = [
@@ -82,7 +112,9 @@ lint.ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D", "UP"]
+"tests/*" = ["D", "UP", "E501"]
+"nicegui_app.py" = ["E501"]
+"src/open_deep_research/search/__init__.py" = ["F401", "F811"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

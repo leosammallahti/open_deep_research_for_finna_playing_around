@@ -65,3 +65,51 @@ def _offline_mode(monkeypatch):
     monkeypatch.setattr(_aio, "sleep", lambda *_a, **_k: _aio.Future(), raising=False)
 
     yield  # run the test
+
+
+# ---------------------------------------------------------------------------
+# Ensure *ODR_FAST_TEST* does not leak between tests
+# ---------------------------------------------------------------------------
+
+
+import pytest  # noqa: E402  – placed after stdlib imports in this file
+
+
+@pytest.fixture(autouse=True)
+def _reset_fast_flag(monkeypatch):
+    """Clear the *ODR_FAST_TEST* flag before and after each test.
+
+    Some legacy test modules set this environment variable at import time
+    which would otherwise persist and accidentally place subsequent tests
+    into fast-mode.  This fixture guarantees isolation.
+    """
+
+    monkeypatch.delenv("ODR_FAST_TEST", raising=False)
+    yield
+    monkeypatch.delenv("ODR_FAST_TEST", raising=False)
+
+
+# ---------------------------------------------------------------------------
+# Convenience fixture to enable *fast mode* for specific tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def fast_mode(monkeypatch):
+    """Enable the *ODR_FAST_TEST* stub path within an individual test.
+
+    Usage::
+
+        def test_something(fast_mode):
+            ...  # fast-mode enabled
+
+    or with pytest markers::
+
+        @pytest.mark.usefixtures("fast_mode")
+        async def test_something():
+            ...
+    """
+
+    monkeypatch.setenv("ODR_FAST_TEST", "1")
+    yield
+    monkeypatch.delenv("ODR_FAST_TEST", raising=False)

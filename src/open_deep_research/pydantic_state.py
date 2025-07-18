@@ -5,14 +5,15 @@ including report sections, search queries, feedback, and multi-agent workflow st
 """
 
 import operator
-from typing import Annotated, List, Literal, Optional
+from typing import Annotated, Any, List, Literal, Optional
 
+from langchain_core.documents import Document
 from langchain_core.messages import AnyMessage
 from pydantic import BaseModel, ConfigDict, Field
 
 
 # Helper aggregator that always returns the new value (last write wins)
-def _replace_fn(_old, new):
+def _replace_fn(_old: Any, new: Any) -> Any:
     """Aggregator that always prefers the *new* value.
 
     Used with Annotated[...] so multiple parallel updates to a single-value
@@ -26,7 +27,7 @@ ReplaceFn = _replace_fn
 
 
 # Helper aggregator that returns the maximum value
-def _max_fn(old, new):
+def _max_fn(old: Any, new: Any) -> Any:
     """Aggregator that returns the maximum value.
 
     Used with Annotated[...] for fields that track maximum values
@@ -39,7 +40,7 @@ MaxFn = _max_fn
 
 
 # Helper aggregator that returns the minimum value
-def _min_fn(old, new):
+def _min_fn(old: Any, new: Any) -> Any:
     """Aggregator that returns the minimum value.
 
     Used with Annotated[...] for fields that track minimum values
@@ -157,6 +158,15 @@ class DeepResearchState(BaseModel):
     # Core fields
     topic: Annotated[str, ReplaceFn] = Field(description="Research topic")
 
+    # Execution mode – guides adapter dispatching (single-workflow vs multi-agent)
+    execution_mode: Annotated[
+        Literal["workflow", "multi_agent"],
+        ReplaceFn,
+    ] = Field(
+        default="workflow",
+        description="Which backend to use: *workflow* (legacy single graph) or *multi_agent* (supervisor-researcher). Default is 'workflow'.",
+    )
+
     # Sections management with proper accumulation
     sections: Annotated[List[Section], ReplaceFn] = Field(
         default_factory=list, description="Report sections to write"
@@ -186,10 +196,15 @@ class DeepResearchState(BaseModel):
         default="", description="Accumulated source strings"
     )
 
-    class Config:
+    ingested_documents: Annotated[List[Document], ReplaceFn] = Field(
+        default_factory=list, description="Ingested documents for analysis"
+    )
+
+    model_config = ConfigDict(
         # Allow extra fields for forward compatibility
-        frozen = True
-        extra = "allow"
+        frozen=True,
+        extra="allow",
+    )
 
 
 # Multi-Agent Specific States
@@ -268,9 +283,10 @@ class SectionResearchState(BaseModel):
         description="Completed sections to pass back to parent graph",
     )
 
-    class Config:
-        frozen = True
-        extra = "allow"
+    model_config = ConfigDict(
+        frozen=True,
+        extra="allow",
+    )
 
 
 class FinalSectionWritingState(BaseModel):
@@ -285,6 +301,7 @@ class FinalSectionWritingState(BaseModel):
     )
     current_section: Section = Field(description="Section to write (non-research)")
 
-    class Config:
-        frozen = True
-        extra = "allow"
+    model_config = ConfigDict(
+        frozen=True,
+        extra="allow",
+    )
