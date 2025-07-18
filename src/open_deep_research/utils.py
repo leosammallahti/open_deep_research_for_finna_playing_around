@@ -30,6 +30,70 @@ import requests
 from aiohttp import ClientTimeout
 from exa_py import Exa
 
+# ---------------------------------------------------------------------------
+# Token budget management (simple heuristic)
+# ---------------------------------------------------------------------------
+
+
+class TokenBudgetManager:
+    """Track and allocate a token budget across calls.
+
+    The class intentionally stays *very* lightweight; the caller provides an
+    estimated token cost per operation and the manager approves or rejects it.
+    This keeps us model-agnostic while preventing runaway token usage.
+    """
+
+    __slots__ = ("_total", "_used")
+
+    def __init__(self, total: int) -> None:  # noqa: D401 – tiny init
+        if total < 0:
+            raise ValueError("Token budget must be non-negative")
+        self._total = total
+        self._used = 0
+
+    # ------------------------------------------------------------------
+    # Public helpers
+    # ------------------------------------------------------------------
+
+    @property
+    def total(self) -> int:  # noqa: D401 – trivial
+        """Return the total token budget."""
+
+        return self._total
+
+    @property
+    def used(self) -> int:  # noqa: D401 – trivial
+        """Return the number of tokens already consumed."""
+
+        return self._used
+
+    @property
+    def remaining(self) -> int:  # noqa: D401 – trivial
+        """Return the remaining token budget (may be zero)."""
+
+        return max(self._total - self._used, 0)
+
+    # ------------------------------------------------------------------
+    def allocate(self, requested: int) -> int:
+        """Allocate *requested* tokens (or the remainder).
+
+        Returns the number of tokens actually granted (0 if exhausted). The
+        internal counter is incremented by that amount.
+        """
+
+        if requested < 0:
+            raise ValueError("Requested tokens must be non-negative")
+
+        grant = min(requested, self.remaining)
+        self._used += grant
+        return grant
+
+    # ------------------------------------------------------------------
+    def exhausted(self) -> bool:  # noqa: D401 – simple boolean helper
+        """Return ``True`` when no tokens remain."""
+
+        return self._used >= self._total
+
 # Handle conditional imports with proper typing
 if TYPE_CHECKING:
     from linkup import LinkupClient

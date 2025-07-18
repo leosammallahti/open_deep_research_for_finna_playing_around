@@ -92,6 +92,111 @@ class BaseConfiguration:
     # report will still include the numbered citations section – controlled by
     # ``include_source_str`` – but will omit the verbose raw dump.
     include_raw_source_details: bool = True
+    token_budget: int = 10000  # Maximum tokens allowed for external search content
+
+    def get_model_for_role(self, role: ModelRole) -> tuple[str, str, str | None]:
+        """Get (provider, model_name, full_model_id) for a given role."""
+        if role == "planner":
+            provider = self.planner_provider
+            model = self.planner_model
+        elif role == "writer":
+            provider = self.writer_provider
+            model = self.writer_model
+        elif role == "summarizer":
+            # Fall back to writer model if summarizer isn't set
+            provider = self.summarization_model_provider or self.writer_provider
+            model = self.summarization_model or self.writer_model
+        elif role == "reflection":
+            # Use writer model for reflection instead of falling back to planner
+            # This keeps us within the user's selected model combination
+            provider = self.reflection_model_provider or self.writer_provider
+            model = self.reflection_model or self.writer_model
+        else:
+            raise ValueError(f"Unknown model role: {role}")
+
+        return provider, model, f"{provider}:{model}"
+
+    @classmethod
+    def from_runnable_config(
+        cls, config: RunnableConfig | None = None
+    ) -> "WorkflowConfiguration":
+        """Create a WorkflowConfiguration instance from a RunnableConfig."""
+        # Safely extract the configurable mapping – runtime may pass in non-dict objects
+        configurable: dict[str, Any] = {}
+        if config and isinstance(config, dict):
+            configurable = config.get("configurable", {})
+        values: dict[str, Any] = {}
+
+        for f in fields(cls):
+            if not f.init:
+                continue
+
+            # Preference order: explicit override in RunnableConfig → settings default
+            # Special case for 'features' which is itself a dict that should
+            # *merge* with defaults instead of replacing entirely.
+            if f.name == "features":
+                # Pull user-supplied overrides (may be missing)
+                user_feat = (
+                    configurable.get("features", {})
+                    if isinstance(configurable.get("features", {}), dict)
+                    else {}
+                )
+                # Default will be injected in __post_init__, so we just pass
+                # the user dict to let __post_init__ merge/validate.
+                if user_feat:
+                    values[f.name] = user_feat
+                continue
+
+            config_value = configurable.get(f.name)
+            settings_default = getattr(settings, f.name, None)
+
+            if config_value is not None:
+                values[f.name] = config_value
+            elif settings_default is not None:
+                values[f.name] = settings_default
+
+        return cls(**values)
+
+    # ------------------------------------------------------------------
+    # Optional feature toggles (validated against compatibility matrix)
+    # ------------------------------------------------------------------
+
+    # We place this field *after* from_runnable_config so the default is
+    # visible to that factory.
+    features: Dict[str, bool] | None = None
+
+    # ------------------------------------------------------------------
+    def __post_init__(self) -> None:  # noqa: D401 – keep dataclass hook name
+        """Run compatibility validation after init."""
+
+        # Dataclasses call __post_init__ *after* fields are set but before
+        # the instance is considered frozen, so we can safely mutate.
+
+        default_map = {
+            "clarification": False,
+            "human_feedback": True,
+            "parallel_research": False,
+            "section_grading": True,
+            "mcp_support": False,
+        }
+        if self.features is None:
+            self.features = default_map
+        else:
+            # Merge defaults with user overrides – user keys win
+            merged = {**default_map, **self.features}
+            self.features = merged
+
+        # ------------------------------------------------------------------
+        # Validation (imported locally to avoid circular deps)
+        # ------------------------------------------------------------------
+        from open_deep_research.feature_compatibility import FeatureCompatibility
+
+        errs = FeatureCompatibility.validate_features(self.features)
+        errs += FeatureCompatibility.validate_mode("workflow", self.features)
+
+        if errs:
+            joined = "; ".join(errs)
+            raise ValueError(f"Invalid feature configuration: {joined}")
 
 
 @dataclass(kw_only=True)
