@@ -26,6 +26,7 @@ This keeps discoverability high and reduces branching logic elsewhere.
 from typing import Any, Awaitable, Callable, Dict, List
 
 from pydantic import BaseModel, Field
+from open_deep_research.utils import TokenBudgetManager
 
 # ---------------------------------------------------------------------------
 # Provider config dataclass
@@ -243,39 +244,54 @@ def validate_search_params(api: str, params: Dict[str, Any]) -> Dict[str, Any]:
 
 
 async def select_and_execute_search(
-    api: str,
-    queries: List[str],
-    params: Dict[str, Any] | None = None,
+    query: str,
+    search_api: str,
+    max_results: int = 5,
+    budget_mgr: TokenBudgetManager | None = None,
+    **kwargs
 ) -> str:
-    """Unified async entry point for **all** search providers.
+    """Execute search with optional token budget enforcement."""
+    
+    # If budget is exhausted, return early
+    if budget_mgr and budget_mgr.exhausted():
+        return "Budget exhausted - no search performed."
+    
+    # Perform the search (existing logic)
+    results = await dispatch_search(search_api, [query], **kwargs)
+    
+    # If no budget manager, return results as-is (existing behavior)
+    if not budget_mgr:
+        return deduplicate_and_format_sources(results)
+    
+    # Estimate token cost and enforce budget
+    filtered_results = []
+    for result in results:
+        content = str(result.get('content', ''))
+        estimated_tokens = len(content) // 4  # rough heuristic: 4 chars per token
+        
+        allocated = budget_mgr.allocate(estimated_tokens)
+        if allocated > 0:
+            # Truncate content if we only got partial allocation
+            if allocated < estimated_tokens:
+                truncate_at = allocated * 4
+                content = content[:truncate_at] + "... [truncated due to budget]"
+            filtered_results.append({**result, 'content': content})
+        else:
+            # Budget exhausted, stop processing more results
+            break
+    
+    return deduplicate_and_format_sources(filtered_results)
 
-    * ``api``      – provider key (e.g. "tavily", "arxiv", or "none").
-    * ``queries``  – list of query strings.
-    * ``params``   – raw kwargs to forward; they will be validated.
-    """
 
-    api = api.lower()
-    params = params or {}
-
-    if api == "none":  # explicit opt-out for unit tests / config
-        return "No search performed (search API set to 'none')."
-
-    if api not in SEARCH_IMPL:
-        raise ValueError(f"Unsupported search API: {api}")
-
-    cfg = SEARCH_IMPL[api]
-    filtered = validate_search_params(api, params)
-
-    # Execute handler – it may be sync or async; we always await.
-    result = await cfg.handler(queries, **filtered)  # type: ignore[arg-type]
-    return result
-
-
-async def dispatch_search(search_api: str, queries: List[str], **kwargs) -> List[Dict[str, Any]]:
+async def dispatch_search(search_api: str, queries: List[str], **kwargs) -> str:
+    """Dispatch search to appropriate handler and return formatted results."""
     handler = SEARCH_IMPL.get(search_api)
     if not handler:
         raise ValueError(f"Unsupported search API: {search_api}")
-    return await handler.handler(queries, **kwargs)
+    
+    # Execute handler and format results
+    raw_results = await handler.handler(queries, **kwargs)
+    return deduplicate_and_format_sources(raw_results)
 
 
 __all__ = [
