@@ -3,17 +3,17 @@
 A modern, professional research platform interface built with NiceGUI.
 Features a clean sidebar navigation, structured workflow, and dark theme.
 """
-import asyncio
 import os
 import sys
 import traceback
 from pathlib import Path
 
-from nicegui import app, ui, run
-from nicegui.events import ValueChangeEventArguments
+from nicegui import ui
 
 # Add the src directory to Python path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
+
+from langchain_core.runnables import RunnableConfig
 
 from open_deep_research.configuration import (
     COMPREHENSIVE_REPORT_STRUCTURE,
@@ -25,14 +25,10 @@ from open_deep_research.dependency_manager import (
     SearchProvider,
     get_available_providers,
 )
-from open_deep_research.exceptions import OutOfBudgetError
 from open_deep_research.graph import get_state_value, graph
 from open_deep_research.model_registry import (
     get_available_model_combos,
-    get_available_models,
-    supports_tool_choice,
 )
-from langchain_core.runnables import RunnableConfig
 
 # Custom CSS for the modern dark-theme sidebar
 ui.add_head_html(
@@ -242,34 +238,42 @@ def create_sidebar():
         )
         current_provider = PROVIDER_DISPLAY_NAMES.get(default_search_provider, "Tavily")
         
-        # Search Provider - styled like expansion item
+        # Search Provider - using expansion style
         with ui.column().classes('w-full mb-4'):
             ui.label('Search Provider').classes('text-white font-medium mb-2')
-            provider_select = ui.select(
-                options=available_provider_names,
-                value=current_provider
-            ).classes('w-full expansion-select')
-            
-            def _select_provider(e):
-                app_state['search_provider'] = get_provider_api(e.value)
-            
-            provider_select.on('change', _select_provider)
-        
-        # Report Style - styled like expansion item
+            current_display = PROVIDER_DISPLAY_NAMES.get(default_search_provider, "Tavily")
+            with ui.expansion(current_provider).classes('w-full sidebar-dropdown') as provider_expansion:
+                provider_expansion._props['dense'] = True
+                provider_expansion._props['header-class'] = 'text-white'
+                with ui.column().classes('w-full p-2'):
+                    for provider_name in available_provider_names:
+                        def make_provider_handler(pn):
+                            def handler():
+                                app_state['search_provider'] = get_provider_api(pn)
+                                provider_expansion.set_text(pn)
+                                provider_expansion.close()
+                            return handler
+                        ui.button(provider_name, on_click=make_provider_handler(provider_name)).props('flat align=left').classes('w-full text-left')
+
+        # Report Style - using expansion style
         with ui.column().classes('w-full mb-4'):
             ui.label('Report Style').classes('text-white font-medium mb-2')
             report_style_options = ["Concise", "Comprehensive", "Executive Summary"]
-            style_select = ui.select(
-                options=report_style_options,
-                value=app_state.get('report_style', 'Concise')
-            ).classes('w-full expansion-select')
-            
-            def _select_style(e):
-                app_state['report_style'] = e.value
-            
-            style_select.on('change', _select_style)
+            current_style = app_state.get('report_style', 'Concise')
+            with ui.expansion(current_style).classes('w-full sidebar-dropdown') as style_expansion:
+                style_expansion._props['dense'] = True
+                style_expansion._props['header-class'] = 'text-white'
+                with ui.column().classes('w-full p-2'):
+                    for style in report_style_options:
+                        def make_style_handler(s):
+                            def handler():
+                                app_state['report_style'] = s
+                                style_expansion.set_text(s)
+                                style_expansion.close()
+                            return handler
+                        ui.button(style, on_click=make_style_handler(style)).props('flat align=left').classes('w-full text-left')
 
-        # Model Configuration - styled like expansion item
+        # Model Configuration - using expansion style
         combos = get_available_model_combos()
         if combos:
             combo_opts = {k: v['display_name'] for k, v in combos.items()}
@@ -277,18 +281,21 @@ def create_sidebar():
             current_combo = app_state.get('model_combo', 'budget')
             if current_combo not in combo_opts:
                 current_combo = next(iter(combo_opts))
-            
             with ui.column().classes('w-full mb-4'):
                 ui.label('Model Configuration').classes('text-white font-medium mb-2')
-                model_select = ui.select(
-                    options=combo_opts,
-                    value=current_combo
-                ).classes('w-full expansion-select')
-                
-                def _select_model(e):
-                    app_state['model_combo'] = e.value
-                
-                model_select.on('change', _select_model)
+                current_display = combo_opts.get(current_combo, 'Budget')
+                with ui.expansion(current_display).classes('w-full sidebar-dropdown') as model_expansion:
+                    model_expansion._props['dense'] = True
+                    model_expansion._props['header-class'] = 'text-white'
+                    with ui.column().classes('w-full p-2'):
+                        for combo_key, display_name in combo_opts.items():
+                            def make_model_handler(k, d):
+                                def handler():
+                                    app_state['model_combo'] = k
+                                    model_expansion.set_text(d)
+                                    model_expansion.close()
+                                return handler
+                            ui.button(display_name, on_click=make_model_handler(combo_key, display_name)).props('flat align=left').classes('w-full text-left')
 
         # Advanced Settings - Simple expansion
         with ui.expansion('Advanced Settings').classes('w-full mt-4'):
@@ -374,7 +381,7 @@ def create_main_research_interface():
                     research_input = ui.textarea(
                         placeholder='Enter your research topic or question. Be specific for optimal results.',
                         value=app_state.get('research_topic', '')
-                    ).classes('w-full bg-gray-700 text-white custom-textarea-padding')
+                    ).classes('w-full text-white custom-textarea-padding').props('borderless')
                     research_input.style('''
                         min-height: 120px; 
                         resize: vertical;
@@ -385,7 +392,10 @@ def create_main_research_interface():
                     def update_research_topic(e):
                         app_state['research_topic'] = e.value
                     
-                    research_input.on('change', update_research_topic)
+                    # Update research topic in real-time so it is available when
+                    # the user clicks "Start Research" without needing to
+                    # defocus the textarea first.
+                    research_input.on('input', update_research_topic)
                     
                     # Start Research Button - prominent and left-aligned
                     with ui.row().classes('w-full mt-8'):
@@ -397,12 +407,26 @@ def create_main_research_interface():
                             font-size: 14px;
                             transition: all 0.2s ease;
                         ''')
-                        start_btn.on('click', start_research)
+
+                        # Ensure we capture the live textarea content even if the field
+                        # hasn’t lost focus yet. We update the shared `app_state` and then
+                        # trigger the async research coroutine.
+                        async def on_start_click():
+                            app_state['research_topic'] = research_input.value
+                            await start_research()
+
+                        start_btn.on('click', on_start_click)
                         
                         # Progress indicator (hidden by default)
                         with ui.column().classes('ml-6').bind_visibility_from(app_state, 'research_in_progress'):
                             ui.linear_progress().bind_value_from(app_state, 'progress').classes('w-48')
                             ui.label().bind_text_from(app_state, 'status_message').classes('text-gray-400 text-sm')
+
+                # === Display the final report once available ===
+                with ui.card().classes('w-full bg-gray-800 border-gray-700 mt-8').bind_visibility_from(app_state, 'final_report'):
+                    ui.label('Research Report').classes('text-white font-medium mb-2')
+                    # Show the generated report in markdown format, updating automatically
+                    ui.markdown().bind_content_from(app_state, 'final_report').classes('text-gray-300')
             
             # Right side - Workflow (fixed width, no flex)
             with ui.column().classes('w-80 flex-shrink-0'):
@@ -693,6 +717,7 @@ def research_page():
         }
         
         /* Make select dropdowns look EXACTLY like expansion items */
+        /* BEGIN_REMOVED_SELECT_OVERRIDES
         .expansion-select {
             background-color: var(--card) !important;
             border: 1px solid var(--border) !important;
@@ -818,6 +843,51 @@ def research_page():
             color: var(--foreground) !important;
             font-size: 14px !important;
         }
+        END_REMOVED_SELECT_OVERRIDES */
+        /* === Sidebar Dropdown Styling === */
+        .sidebar-dropdown .q-btn--flat:hover {
+            background-color: var(--muted) !important;
+        }
+
+        /* === Textarea Border Fix === */
+        .q-textarea .q-field__control {
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            background-color: rgba(255, 255, 255, 0.03) !important;
+            transition: border-color 0.2s ease !important;
+            border-radius: 6px !important;
+            overflow: hidden !important;
+            position: relative !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+        .q-textarea .q-field__control::before,
+        .q-textarea .q-field__control::after,
+        .q-field--filled .q-field__control::before,
+        .q-field--filled .q-field__control::after,
+        .q-field--outlined .q-field__control::before,
+        .q-field--outlined .q-field__control::after,
+        .q-field--standard .q-field__control::before,
+        .q-field--standard .q-field__control::after,
+        .q-field--borderless .q-field__control::before,
+        .q-field--borderless .q-field__control::after {
+            display: none !important;
+            border: none !important;
+            content: none !important;
+        }
+        .q-textarea .q-field__control:hover {
+            border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        }
+        .q-textarea .q-field__control:focus-within {
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        }
+        .q-textarea textarea {
+            background-color: transparent !important;
+            border: none !important;
+            outline: none !important;
+        }
+        .q-field__bottom { display: none !important; }
+        .q-field--filled .q-field__inner,
+        .q-field--outlined .q-field__inner { border: none !important; box-shadow: none !important; }
     </style>
     ''')
     

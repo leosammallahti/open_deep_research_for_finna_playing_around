@@ -32,6 +32,11 @@ class CriteriaGrade(BaseModel):
     )
 
 
+class GroundednessScore(BaseModel):
+    score: int = Field(description="Score from 1-5")
+    reasoning: str
+
+
 # Function to create evaluation LLM at test time
 def get_evaluation_llm(eval_model=None):
     """Create and return an evaluation LLM.
@@ -202,7 +207,7 @@ def test_response_criteria_evaluation(research_agent, search_api, models, eval_m
         initial_msg = [
             {
                 "role": "user",
-                "content": "Give me a high-level overview of MCP (model context protocol). Keep the report to 3 main body sections. One section on the origins of MPC, one section on interesting examples of MCP servers, and one section on the future roadmap for MCP. Report should be written for a developer audience.",
+                "content": "Give me a high-level overview of MCP (model context protocol). Keep the report to 3 main body sections. One section on the origins of MCP, one section on interesting examples of MCP servers, and one section on the future roadmap for MCP. Report should be written for a developer audience.",
             }
         ]
 
@@ -234,7 +239,7 @@ def test_response_criteria_evaluation(research_agent, search_api, models, eval_m
 
     elif research_agent == "graph":
         # Topic query
-        topic_query = "Give me a high-level overview of MCP (model context protocol). Keep the report to 3 main body sections. One section on the origins of MPC, one section on interesting examples of MCP servers, and one section on the future roadmap for MCP. Report should be written for a developer audience."
+        topic_query = "Give me a high-level overview of MCP (model context protocol). Keep the report to 3 main body sections. One section on the origins of MCP, one section on interesting examples of MCP servers, and one section on the future roadmap for MCP. Report should be written for a developer audience."
 
         # Checkpointer for the graph approach
         checkpointer = MemorySaver()

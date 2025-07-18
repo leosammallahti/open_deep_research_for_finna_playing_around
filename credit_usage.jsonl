@@ -2166,3 +2166,464 @@
 {"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 393, "output_tokens": 28, "ts": "2025-07-10T05:54:55.172521"}
 {"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 391, "output_tokens": 60, "ts": "2025-07-10T05:54:55.980595"}
 {"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 389, "output_tokens": 62, "ts": "2025-07-10T05:54:55.980720"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 109, "ts": "2025-07-10T18:28:06.667300"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 391, "output_tokens": 44, "ts": "2025-07-10T18:28:09.798475"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "what are cats and their characteristics?"}, "ts": "2025-07-10T18:28:09.809544"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "cat behavior and health"}, "ts": "2025-07-10T18:28:09.811095"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 393, "output_tokens": 63, "ts": "2025-07-10T18:28:09.885956"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the main characteristics of cats?"}, "ts": "2025-07-10T18:28:09.894162"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the different breeds of cats?"}, "ts": "2025-07-10T18:28:09.895829"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What is the average lifespan of a cat?"}, "ts": "2025-07-10T18:28:09.897353"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 389, "output_tokens": 35, "ts": "2025-07-10T18:28:10.059349"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "what are cats overview"}, "ts": "2025-07-10T18:28:10.065950"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "introduction to cats"}, "ts": "2025-07-10T18:28:10.067842"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 5, "credits": 15, "details": {"urls": ["https://en.wikipedia.org/wiki/Cat", "https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality", "https://www.britannica.com/animal/cat"]}, "ts": "2025-07-10T18:28:14.369672"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 5, "credits": 15, "details": {"urls": ["https://en.wikipedia.org/wiki/Cat", "https://www.britannica.com/animal/cat", "https://www.cozycatfurniture.com/blog/cats-characteristics?srsltid=AfmBOoqpYT80ewi05Dusxw0ovWFNT87mYhmqFEi-Pj3XlIhMhp-I8XDg"]}, "ts": "2025-07-10T18:28:15.783501"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 5, "credits": 15, "details": {"urls": ["https://en.wikipedia.org/wiki/Cats_(musical)", "https://en.wikipedia.org/wiki/Cat", "https://www.litter-robot.com/blog/breeds-of-cats/?srsltid=AfmBOopVp8XmFsFAvOD96gR4NzP9giTxuw6FEFSjND2rA_sUb0zcH95p"]}, "ts": "2025-07-10T18:28:17.349058"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 6689, "output_tokens": 130, "ts": "2025-07-10T18:28:23.710402"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 592, "output_tokens": 39, "ts": "2025-07-10T18:28:26.207048"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 7715, "output_tokens": 99, "ts": "2025-07-10T18:28:46.576125"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 6861, "output_tokens": 126, "ts": "2025-07-10T18:28:47.040153"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 559, "output_tokens": 39, "ts": "2025-07-10T18:28:49.028275"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 596, "output_tokens": 42, "ts": "2025-07-10T18:28:49.057702"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the main characteristics of cats?"}, "ts": "2025-07-10T18:28:49.072618"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 5, "credits": 15, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality", "https://en.wikipedia.org/wiki/Cat", "https://www.britannica.com/animal/cat"]}, "ts": "2025-07-10T18:28:52.205417"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 7319, "output_tokens": 86, "ts": "2025-07-10T18:28:56.440604"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 550, "output_tokens": 42, "ts": "2025-07-10T18:28:57.961711"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 194, "ts": "2025-07-10T20:12:40.366572"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 144, "ts": "2025-07-10T20:12:41.362831"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 568, "output_tokens": 58, "ts": "2025-07-10T20:12:42.180071"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 571, "output_tokens": 65, "ts": "2025-07-10T20:12:42.844397"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 572, "output_tokens": 59, "ts": "2025-07-10T20:12:43.678183"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 572, "output_tokens": 66, "ts": "2025-07-10T20:12:43.793948"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 572, "output_tokens": 65, "ts": "2025-07-10T20:12:44.329456"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 764, "output_tokens": 206, "ts": "2025-07-10T20:13:08.824877"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 766, "output_tokens": 206, "ts": "2025-07-10T20:13:09.199548"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 764, "output_tokens": 175, "ts": "2025-07-10T20:13:09.475328"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 763, "output_tokens": 219, "ts": "2025-07-10T20:13:10.284323"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 847, "output_tokens": 77, "ts": "2025-07-10T20:13:11.013779"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 817, "output_tokens": 83, "ts": "2025-07-10T20:13:11.235577"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 848, "output_tokens": 79, "ts": "2025-07-10T20:13:11.453055"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 861, "output_tokens": 80, "ts": "2025-07-10T20:13:12.420026"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 109, "ts": "2025-07-10T20:13:14.617108"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 389, "output_tokens": 34, "ts": "2025-07-10T20:13:16.972948"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 387, "output_tokens": 36, "ts": "2025-07-10T20:13:17.485168"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 391, "output_tokens": 34, "ts": "2025-07-10T20:13:17.485371"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 524, "output_tokens": 43, "ts": "2025-07-10T20:13:19.866299"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 520, "output_tokens": 58, "ts": "2025-07-10T20:13:20.406184"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 524, "output_tokens": 47, "ts": "2025-07-10T20:13:20.406993"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 509, "output_tokens": 45, "ts": "2025-07-10T20:13:22.253080"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 515, "output_tokens": 48, "ts": "2025-07-10T20:13:22.759660"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 522, "output_tokens": 46, "ts": "2025-07-10T20:13:22.760207"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 549, "output_tokens": 43, "ts": "2025-07-10T20:13:24.315530"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 553, "output_tokens": 47, "ts": "2025-07-10T20:13:24.841157"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 560, "output_tokens": 64, "ts": "2025-07-10T20:13:25.336099"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 509, "output_tokens": 45, "ts": "2025-07-10T20:13:26.719158"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 522, "output_tokens": 46, "ts": "2025-07-10T20:13:26.829765"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 515, "output_tokens": 48, "ts": "2025-07-10T20:13:27.094362"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 759, "output_tokens": 221, "ts": "2025-07-10T20:13:28.544352"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 109, "ts": "2025-07-10T20:13:28.614493"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 389, "output_tokens": 60, "ts": "2025-07-10T20:13:31.336536"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 859, "output_tokens": 80, "ts": "2025-07-10T20:13:31.455002"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 391, "output_tokens": 30, "ts": "2025-07-10T20:13:32.070141"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 387, "output_tokens": 43, "ts": "2025-07-10T20:13:32.072834"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 109, "ts": "2025-07-10T20:13:33.757933"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 524, "output_tokens": 49, "ts": "2025-07-10T20:13:34.212918"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 524, "output_tokens": 59, "ts": "2025-07-10T20:13:35.101702"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 520, "output_tokens": 67, "ts": "2025-07-10T20:13:35.101821"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 391, "output_tokens": 34, "ts": "2025-07-10T20:13:37.293874"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 389, "output_tokens": 34, "ts": "2025-07-10T20:13:37.297879"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 517, "output_tokens": 48, "ts": "2025-07-10T20:13:37.383743"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 387, "output_tokens": 36, "ts": "2025-07-10T20:13:38.047028"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 531, "output_tokens": 45, "ts": "2025-07-10T20:13:38.172518"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 525, "output_tokens": 43, "ts": "2025-07-10T20:13:38.172813"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 555, "output_tokens": 49, "ts": "2025-07-10T20:13:40.301269"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 524, "output_tokens": 48, "ts": "2025-07-10T20:13:40.491940"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 569, "output_tokens": 76, "ts": "2025-07-10T20:13:41.079373"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 565, "output_tokens": 59, "ts": "2025-07-10T20:13:41.079484"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 524, "output_tokens": 40, "ts": "2025-07-10T20:13:41.312245"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 520, "output_tokens": 71, "ts": "2025-07-10T20:13:41.312348"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 517, "output_tokens": 48, "ts": "2025-07-10T20:13:43.422679"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 516, "output_tokens": 44, "ts": "2025-07-10T20:13:43.591794"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 525, "output_tokens": 43, "ts": "2025-07-10T20:13:43.830932"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 540, "output_tokens": 42, "ts": "2025-07-10T20:13:43.940560"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 535, "output_tokens": 43, "ts": "2025-07-10T20:13:44.099695"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 506, "output_tokens": 43, "ts": "2025-07-10T20:13:44.762593"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 554, "output_tokens": 48, "ts": "2025-07-10T20:13:46.187772"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 546, "output_tokens": 40, "ts": "2025-07-10T20:13:46.755159"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 573, "output_tokens": 61, "ts": "2025-07-10T20:13:46.755408"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 109, "ts": "2025-07-10T20:13:46.760745"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 506, "output_tokens": 40, "ts": "2025-07-10T20:13:49.714146"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 516, "output_tokens": 44, "ts": "2025-07-10T20:13:49.734076"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 393, "output_tokens": 28, "ts": "2025-07-10T20:13:49.966854"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 525, "output_tokens": 38, "ts": "2025-07-10T20:13:50.224323"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 389, "output_tokens": 50, "ts": "2025-07-10T20:13:50.454688"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 391, "output_tokens": 60, "ts": "2025-07-10T20:13:50.939037"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 109, "ts": "2025-07-10T20:13:52.757130"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 387, "output_tokens": 43, "ts": "2025-07-10T20:13:56.064469"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 389, "output_tokens": 60, "ts": "2025-07-10T20:13:56.066126"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 391, "output_tokens": 42, "ts": "2025-07-10T20:13:57.792136"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 524, "output_tokens": 56, "ts": "2025-07-10T20:14:02.235477"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 520, "output_tokens": 67, "ts": "2025-07-10T20:14:03.591792"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 524, "output_tokens": 43, "ts": "2025-07-10T20:14:03.591907"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 524, "output_tokens": 48, "ts": "2025-07-10T20:14:07.390767"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 509, "output_tokens": 43, "ts": "2025-07-10T20:14:08.639557"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 531, "output_tokens": 45, "ts": "2025-07-10T20:14:08.639644"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 562, "output_tokens": 56, "ts": "2025-07-10T20:14:10.749398"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 549, "output_tokens": 49, "ts": "2025-07-10T20:14:11.452669"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 569, "output_tokens": 77, "ts": "2025-07-10T20:14:12.109801"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 524, "output_tokens": 48, "ts": "2025-07-10T20:14:13.423175"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 541, "output_tokens": 42, "ts": "2025-07-10T20:14:13.716813"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 509, "output_tokens": 43, "ts": "2025-07-10T20:14:13.785042"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 109, "ts": "2025-07-10T20:14:16.215007"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 389, "output_tokens": 50, "ts": "2025-07-10T20:14:19.065310"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 391, "output_tokens": 60, "ts": "2025-07-10T20:14:19.395692"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 393, "output_tokens": 28, "ts": "2025-07-10T20:14:19.973171"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 0, "output_tokens": 0, "ts": "2025-07-10T22:04:59.027368"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 109, "ts": "2025-07-10T22:22:44.308376"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 389, "output_tokens": 37, "ts": "2025-07-10T22:22:50.785027"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "what are cats overview"}, "ts": "2025-07-10T22:22:50.797494"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "introduction to cats topic area"}, "ts": "2025-07-10T22:22:50.803130"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 393, "output_tokens": 56, "ts": "2025-07-10T22:22:51.287144"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 391, "output_tokens": 48, "ts": "2025-07-10T22:22:51.288938"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the main characteristics of cats?"}, "ts": "2025-07-10T22:22:51.308187"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the different breeds of cats?"}, "ts": "2025-07-10T22:22:51.312133"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the common behaviors of cats?"}, "ts": "2025-07-10T22:22:51.315585"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "what are cats and their characteristics"}, "ts": "2025-07-10T22:22:51.327143"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "cat behavior and health"}, "ts": "2025-07-10T22:22:51.329299"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "cat breeds and their differences"}, "ts": "2025-07-10T22:22:51.332733"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 2, "credits": 6, "details": {"urls": ["https://en.wikipedia.org/wiki/Cat", "https://www.reddit.com/r/CatAdvice/comments/8eu8fp/guide_vrishchikaas_guide_to_cat_introductions/"]}, "ts": "2025-07-10T22:22:53.285292"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 3, "credits": 9, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality", "https://www.merckvetmanual.com/cat-owners/behavior-of-cats/behavior-problems-in-cats", "https://basepaws.com/cat-breeds"]}, "ts": "2025-07-10T22:22:53.381584"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 3, "credits": 9, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality", "https://en.wikipedia.org/wiki/List_of_cat_breeds", "https://www.medvet.com/cat-behaviors/"]}, "ts": "2025-07-10T22:22:53.565014"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 2856, "output_tokens": 90, "ts": "2025-07-10T22:22:58.174591"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 5722, "output_tokens": 123, "ts": "2025-07-10T22:22:58.707387"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 4763, "output_tokens": 101, "ts": "2025-07-10T22:22:58.707696"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 591, "output_tokens": 42, "ts": "2025-07-10T22:23:00.781279"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the basic characteristics of cats?"}, "ts": "2025-07-10T22:23:00.799353"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 571, "output_tokens": 42, "ts": "2025-07-10T22:23:02.981569"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality"]}, "ts": "2025-07-10T22:23:02.981687"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 556, "output_tokens": 41, "ts": "2025-07-10T22:23:02.984471"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the basic characteristics of cats?"}, "ts": "2025-07-10T22:23:02.993066"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the characteristics of cats?"}, "ts": "2025-07-10T22:23:03.001510"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality"]}, "ts": "2025-07-10T22:23:05.296092"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality"]}, "ts": "2025-07-10T22:23:06.032366"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 2428, "output_tokens": 167, "ts": "2025-07-10T22:23:06.248241"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 2406, "output_tokens": 111, "ts": "2025-07-10T22:23:10.070608"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 2391, "output_tokens": 115, "ts": "2025-07-10T22:23:10.618558"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 2428, "output_tokens": 217, "ts": "2025-07-10T22:23:10.618652"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 581, "output_tokens": 42, "ts": "2025-07-10T22:23:12.079439"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 581, "output_tokens": 43, "ts": "2025-07-10T22:23:12.090187"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 2428, "output_tokens": 167, "ts": "2025-07-10T22:23:16.598455"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 109, "ts": "2025-07-10T22:33:27.261863"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 389, "output_tokens": 35, "ts": "2025-07-10T22:33:33.423334"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "what are cats overview"}, "ts": "2025-07-10T22:33:33.436205"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "introduction to cats"}, "ts": "2025-07-10T22:33:33.439755"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 391, "output_tokens": 65, "ts": "2025-07-10T22:33:33.776617"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are cats?"}, "ts": "2025-07-10T22:33:33.800066"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Cat behavior and characteristics"}, "ts": "2025-07-10T22:33:33.804726"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Cat breeds and types"}, "ts": "2025-07-10T22:33:33.808908"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Cat health and nutrition"}, "ts": "2025-07-10T22:33:33.814081"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Cat care and maintenance"}, "ts": "2025-07-10T22:33:33.821569"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 393, "output_tokens": 56, "ts": "2025-07-10T22:33:33.882341"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the key characteristics of cats?"}, "ts": "2025-07-10T22:33:33.894717"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the different breeds of cats?"}, "ts": "2025-07-10T22:33:33.899631"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the common behaviors of cats?"}, "ts": "2025-07-10T22:33:33.903803"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 2, "credits": 6, "details": {"urls": ["https://en.wikipedia.org/wiki/Cat", "https://www.americanhumane.org/public-education/introducing-cats-to-cats/"]}, "ts": "2025-07-10T22:33:36.120673"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 3, "credits": 9, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality", "https://en.wikipedia.org/wiki/List_of_cat_breeds", "https://www.medvet.com/cat-behaviors/"]}, "ts": "2025-07-10T22:33:36.125966"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 5, "credits": 15, "details": {"urls": ["https://en.wikipedia.org/wiki/Cat", "https://en.wikipedia.org/wiki/Cat_behavior", "https://en.wikipedia.org/wiki/List_of_cat_breeds"]}, "ts": "2025-07-10T22:33:36.547209"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 4763, "output_tokens": 101, "ts": "2025-07-10T22:33:40.802705"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 6711, "output_tokens": 112, "ts": "2025-07-10T22:33:42.427121"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 571, "output_tokens": 42, "ts": "2025-07-10T22:33:42.924282"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the basic characteristics of cats?"}, "ts": "2025-07-10T22:33:42.932785"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 574, "output_tokens": 42, "ts": "2025-07-10T22:33:44.215864"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the different breeds of cats?"}, "ts": "2025-07-10T22:33:44.225095"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality"]}, "ts": "2025-07-10T22:33:45.052680"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://en.wikipedia.org/wiki/List_of_cat_breeds"]}, "ts": "2025-07-10T22:33:47.689414"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 2406, "output_tokens": 118, "ts": "2025-07-10T22:33:48.426666"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 588, "output_tokens": 42, "ts": "2025-07-10T22:33:54.315644"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 1882, "output_tokens": 95, "ts": "2025-07-10T22:33:54.991190"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 563, "output_tokens": 42, "ts": "2025-07-10T22:33:57.328541"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 2720, "output_tokens": 118, "ts": "2025-07-10T22:34:07.257075"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 584, "output_tokens": 42, "ts": "2025-07-10T22:34:08.891907"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the main characteristics of cats?"}, "ts": "2025-07-10T22:34:08.898224"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality"]}, "ts": "2025-07-10T22:34:10.966690"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 2419, "output_tokens": 231, "ts": "2025-07-10T22:34:15.133263"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 2419, "output_tokens": 154, "ts": "2025-07-10T22:34:19.604638"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 620, "output_tokens": 42, "ts": "2025-07-10T22:34:21.637354"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 109, "ts": "2025-07-10T22:47:20.860597"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 391, "output_tokens": 37, "ts": "2025-07-10T22:47:25.176785"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "what are cats and their characteristics"}, "ts": "2025-07-10T22:47:25.189783"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "cat behavior and habitat"}, "ts": "2025-07-10T22:47:25.193539"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 393, "output_tokens": 56, "ts": "2025-07-10T22:47:25.212901"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the main characteristics of cats?"}, "ts": "2025-07-10T22:47:25.221023"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the different breeds of cats?"}, "ts": "2025-07-10T22:47:25.223630"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the common behaviors of cats?"}, "ts": "2025-07-10T22:47:25.225674"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 389, "output_tokens": 35, "ts": "2025-07-10T22:47:25.333756"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "what are cats overview"}, "ts": "2025-07-10T22:47:25.343178"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "brief introduction to cats"}, "ts": "2025-07-10T22:47:25.347110"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 3, "credits": 9, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality", "https://en.wikipedia.org/wiki/List_of_cat_breeds", "https://www.medvet.com/cat-behaviors/"]}, "ts": "2025-07-10T22:47:27.086140"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 2, "credits": 6, "details": {"urls": ["https://en.wikipedia.org/wiki/Cat", "https://www.jacksongalaxy.com/blogs/news/the-dos-and-donts-of-introducing-cats?srsltid=AfmBOopBlw4iAr1xQtqo9kAvcCZrqpPshpU0ZSqadWlvENFV9DjlJMrz"]}, "ts": "2025-07-10T22:47:27.089309"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 2, "credits": 6, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality", "https://www.alleycat.org/resources/biology-and-behavior-of-the-cat/"]}, "ts": "2025-07-10T22:47:27.524037"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 3257, "output_tokens": 111, "ts": "2025-07-10T22:47:33.955692"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 4763, "output_tokens": 101, "ts": "2025-07-10T22:47:35.216618"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 579, "output_tokens": 42, "ts": "2025-07-10T22:47:38.797624"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the basic characteristics of cats?"}, "ts": "2025-07-10T22:47:38.815277"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 571, "output_tokens": 42, "ts": "2025-07-10T22:47:39.795101"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the basic characteristics of cats?"}, "ts": "2025-07-10T22:47:39.805756"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 3031, "output_tokens": 74, "ts": "2025-07-10T22:47:40.225157"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality"]}, "ts": "2025-07-10T22:47:41.378769"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality"]}, "ts": "2025-07-10T22:47:41.804349"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 540, "output_tokens": 42, "ts": "2025-07-10T22:47:43.584992"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What is a brief overview of cats?"}, "ts": "2025-07-10T22:47:45.061564"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://en.wikipedia.org/wiki/Cat"]}, "ts": "2025-07-10T22:47:47.868143"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 2406, "output_tokens": 118, "ts": "2025-07-10T22:47:47.872011"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 2416, "output_tokens": 163, "ts": "2025-07-10T22:47:47.872180"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 588, "output_tokens": 42, "ts": "2025-07-10T22:47:52.106886"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 2416, "output_tokens": 99, "ts": "2025-07-10T22:47:52.220589"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 567, "output_tokens": 42, "ts": "2025-07-10T22:47:54.690708"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 1809, "output_tokens": 102, "ts": "2025-07-10T22:47:55.434504"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 568, "output_tokens": 41, "ts": "2025-07-10T22:47:58.024728"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 0, "output_tokens": 0, "ts": "2025-07-10T22:49:14.797416"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 0, "output_tokens": 0, "ts": "2025-07-10T23:16:05.926172"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 0, "output_tokens": 0, "ts": "2025-07-10T23:28:59.389414"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 0, "output_tokens": 0, "ts": "2025-07-10T23:34:02.240966"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 482, "output_tokens": 91, "ts": "2025-07-11T13:35:18.956103"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 224, "output_tokens": 18, "ts": "2025-07-11T13:35:19.889121"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Why are cats a popular choice for domestic pets?"}, "ts": "2025-07-11T13:35:19.892362"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 221, "output_tokens": 20, "ts": "2025-07-11T13:35:20.621068"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 223, "output_tokens": 13, "ts": "2025-07-11T13:35:20.625494"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "key features of cats"}, "ts": "2025-07-11T13:35:20.627796"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "traits that define cats"}, "ts": "2025-07-11T13:35:20.629885"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Behavior patterns of domestic cats"}, "ts": "2025-07-11T13:35:20.635883"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.freshpet.com/blog/10-reasons-why-cats-make-great-pets"]}, "ts": "2025-07-11T13:35:21.790461"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://en.wikipedia.org/wiki/Cat_behavior"]}, "ts": "2025-07-11T13:35:22.163190"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 228, "output_tokens": 19, "ts": "2025-07-11T13:35:22.697028"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the different breeds of cats and their characteristics?"}, "ts": "2025-07-11T13:35:22.699562"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 2, "credits": 6, "details": {"urls": ["https://www.cozycatfurniture.com/blog/cats-characteristics?srsltid=AfmBOope_YoTtIS8FZQVanC9K_AZKF5ILD2OhrEjJ7O5eKdg9-fhXmOu", "https://autumntrailsvet.com/feline-traits/"]}, "ts": "2025-07-11T13:35:23.169322"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.feliway.co.uk/blogs/news/kitty-personalities-what-personality-traits-do-different-breeds-have?srsltid=AfmBOopIj_EmRRlL6-A6AVEofUuI1BUIhcWpiyaIjfzoB3ItRW5NyEMv"]}, "ts": "2025-07-11T13:35:25.288665"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1731, "output_tokens": 138, "ts": "2025-07-11T13:35:25.714615"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1910, "output_tokens": 104, "ts": "2025-07-11T13:35:26.150582"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 385, "output_tokens": 19, "ts": "2025-07-11T13:35:26.858432"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 418, "output_tokens": 23, "ts": "2025-07-11T13:35:27.338899"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1795, "output_tokens": 120, "ts": "2025-07-11T13:35:36.323487"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 405, "output_tokens": 20, "ts": "2025-07-11T13:35:37.275066"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 2724, "output_tokens": 169, "ts": "2025-07-11T13:35:52.805487"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 447, "output_tokens": 20, "ts": "2025-07-11T13:35:53.818937"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 447, "output_tokens": 20, "ts": "2025-07-11T13:35:55.811589"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 482, "output_tokens": 105, "ts": "2025-07-14T22:11:51.752360"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 482, "output_tokens": 88, "ts": "2025-07-14T22:11:51.923393"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 482, "output_tokens": 82, "ts": "2025-07-14T22:11:52.157267"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 222, "output_tokens": 14, "ts": "2025-07-14T22:11:52.816739"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 224, "output_tokens": 13, "ts": "2025-07-14T22:11:52.816907"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Cat health needs and care requirements"}, "ts": "2025-07-14T22:11:52.826721"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Common behaviors of domestic cats"}, "ts": "2025-07-14T22:11:52.839281"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 221, "output_tokens": 14, "ts": "2025-07-14T22:11:53.170646"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Key physical features of domestic cats"}, "ts": "2025-07-14T22:11:53.180309"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 222, "output_tokens": 43, "ts": "2025-07-14T22:11:53.316502"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Common behavior patterns of domestic cats"}, "ts": "2025-07-14T22:11:53.323604"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Social behavior in cats"}, "ts": "2025-07-14T22:11:53.327718"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Hunting behavior of felines"}, "ts": "2025-07-14T22:11:53.333271"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Territorial instincts in domestic cats"}, "ts": "2025-07-14T22:11:53.336746"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 224, "output_tokens": 12, "ts": "2025-07-14T22:11:53.384352"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Main characteristics of cats"}, "ts": "2025-07-14T22:11:53.390474"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 220, "output_tokens": 16, "ts": "2025-07-14T22:11:53.518389"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 221, "output_tokens": 13, "ts": "2025-07-14T22:11:53.541637"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the key characteristics of cats?"}, "ts": "2025-07-14T22:11:53.545346"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Physical traits of domestic cats"}, "ts": "2025-07-14T22:11:53.563123"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 220, "output_tokens": 17, "ts": "2025-07-14T22:11:53.636750"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the different breeds of domestic cats?"}, "ts": "2025-07-14T22:11:53.644489"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 220, "output_tokens": 16, "ts": "2025-07-14T22:11:53.764611"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 223, "output_tokens": 13, "ts": "2025-07-14T22:11:53.765547"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 224, "output_tokens": 32, "ts": "2025-07-14T22:11:53.766114"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What is the history of domestic cats?"}, "ts": "2025-07-14T22:11:53.781579"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Physical characteristics of domestic cats"}, "ts": "2025-07-14T22:11:53.790640"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Main characteristics of domestic cats"}, "ts": "2025-07-14T22:11:53.801433"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Evolutionary history of cats"}, "ts": "2025-07-14T22:11:53.803813"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Behavioral traits of cats"}, "ts": "2025-07-14T22:11:53.806021"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 224, "output_tokens": 17, "ts": "2025-07-14T22:11:53.822478"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Main points to include in a summary of cats"}, "ts": "2025-07-14T22:11:53.833170"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 224, "output_tokens": 13, "ts": "2025-07-14T22:11:54.400230"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Behavior patterns of domestic cats"}, "ts": "2025-07-14T22:11:54.404484"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://bestfriends.org/pet-care-resources/cat-health-care-general-guidelines"]}, "ts": "2025-07-14T22:11:54.672387"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.medvet.com/cat-behaviors/"]}, "ts": "2025-07-14T22:11:55.038562"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality"]}, "ts": "2025-07-14T22:11:55.231741"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.britannica.com/animal/cat"]}, "ts": "2025-07-14T22:11:55.240480"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.smithsonianmag.com/history/a-brief-history-of-house-cats-158390681/"]}, "ts": "2025-07-14T22:11:55.403565"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality"]}, "ts": "2025-07-14T22:11:55.448078"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://en.wikipedia.org/wiki/List_of_cat_breeds"]}, "ts": "2025-07-14T22:11:55.454441"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.reddit.com/r/Broadway/comments/aea2c8/cats/"]}, "ts": "2025-07-14T22:11:55.484889"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.cozycatfurniture.com/blog/cats-characteristics?srsltid=AfmBOoqOGMkTbxqwznm4Q5fMb77SPb6w3VrRPaYyDtldH2-46USwDnXj"]}, "ts": "2025-07-14T22:11:55.605334"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 4, "credits": 12, "details": {"urls": ["https://www.petsbest.com/blog/cat-behavior-problems", "https://www.sciencedirect.com/science/article/pii/S1090023323000795", "https://www.four-paws.org/our-stories/publications-guides/cats-and-their-hunting-behaviour"]}, "ts": "2025-07-14T22:11:55.621518"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.cozycatfurniture.com/blog/cats-characteristics?srsltid=AfmBOoqJdle4jelL1HCMwcSBKieaQtefIFFLXEepizGXhs4gHs0OuWGx"]}, "ts": "2025-07-14T22:11:55.799942"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 3, "credits": 9, "details": {"urls": ["https://www.britannica.com/animal/cat", "https://www.killarneycat.com/resources/blog/march-2020/the-evolution-of-cats", "https://www.thedrakecenter.com/services/cats/blog/15-strange-cat-behaviors-explained"]}, "ts": "2025-07-14T22:11:56.078301"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://en.wikipedia.org/wiki/Cat_behavior"]}, "ts": "2025-07-14T22:11:56.638775"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1348, "output_tokens": 177, "ts": "2025-07-14T22:11:57.386282"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1461, "output_tokens": 173, "ts": "2025-07-14T22:11:57.965787"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 456, "output_tokens": 19, "ts": "2025-07-14T22:11:58.037328"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1794, "output_tokens": 85, "ts": "2025-07-14T22:11:58.067942"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 2023, "output_tokens": 123, "ts": "2025-07-14T22:11:58.104682"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 2204, "output_tokens": 147, "ts": "2025-07-14T22:11:58.418287"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1558, "output_tokens": 87, "ts": "2025-07-14T22:11:58.418639"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 2058, "output_tokens": 166, "ts": "2025-07-14T22:11:58.419534"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 454, "output_tokens": 21, "ts": "2025-07-14T22:11:58.685150"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 362, "output_tokens": 10, "ts": "2025-07-14T22:11:58.766443"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 401, "output_tokens": 20, "ts": "2025-07-14T22:11:58.965178"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 364, "output_tokens": 20, "ts": "2025-07-14T22:11:59.101243"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 443, "output_tokens": 16, "ts": "2025-07-14T22:11:59.245793"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 3952, "output_tokens": 158, "ts": "2025-07-14T22:11:59.323446"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 428, "output_tokens": 31, "ts": "2025-07-14T22:11:59.416058"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1732, "output_tokens": 105, "ts": "2025-07-14T22:11:59.455809"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 439, "output_tokens": 19, "ts": "2025-07-14T22:12:00.049149"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 386, "output_tokens": 19, "ts": "2025-07-14T22:12:00.094244"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1544, "output_tokens": 154, "ts": "2025-07-14T22:12:03.999728"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 434, "output_tokens": 19, "ts": "2025-07-14T22:12:04.671394"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 5472, "output_tokens": 204, "ts": "2025-07-14T22:12:05.729852"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1544, "output_tokens": 192, "ts": "2025-07-14T22:12:06.362395"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 483, "output_tokens": 19, "ts": "2025-07-14T22:12:06.643249"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 470, "output_tokens": 26, "ts": "2025-07-14T22:12:07.165376"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1741, "output_tokens": 136, "ts": "2025-07-14T22:12:09.577499"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 417, "output_tokens": 18, "ts": "2025-07-14T22:12:10.211278"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Plot of Cats musical"}, "ts": "2025-07-14T22:12:10.217789"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://en.wikipedia.org/wiki/Cats_(musical)"]}, "ts": "2025-07-14T22:12:12.086986"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1844, "output_tokens": 160, "ts": "2025-07-14T22:12:18.251157"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 441, "output_tokens": 24, "ts": "2025-07-14T22:12:19.097216"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 482, "output_tokens": 108, "ts": "2025-07-14T22:21:51.618945"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 220, "output_tokens": 16, "ts": "2025-07-14T22:21:52.478416"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the main characteristics of cats?"}, "ts": "2025-07-14T22:21:52.484578"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 224, "output_tokens": 12, "ts": "2025-07-14T22:21:52.545786"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Main points about cats"}, "ts": "2025-07-14T22:21:52.550794"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 222, "output_tokens": 14, "ts": "2025-07-14T22:21:52.570004"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Typical behaviors of domestic cats"}, "ts": "2025-07-14T22:21:52.576641"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 221, "output_tokens": 17, "ts": "2025-07-14T22:21:52.593434"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "What are the physical characteristics that define cats?"}, "ts": "2025-07-14T22:21:52.598204"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 224, "output_tokens": 26, "ts": "2025-07-14T22:21:52.887790"}
+{"provider": "tavily", "event": "search", "depth": "basic", "count": 1, "credits": 1, "details": {"query": "Where do cats live in the wild and how has their relationship with humans evolved over time?"}, "ts": "2025-07-14T22:21:52.893731"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://en.wikipedia.org/wiki/Cat_behavior"]}, "ts": "2025-07-14T22:21:54.114929"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.cozycatfurniture.com/blog/cats-characteristics?srsltid=AfmBOoocz7gFykPnCzpdK6IhItPD0ajr3s_u8qhxZSfMinHyM0lkfBs-"]}, "ts": "2025-07-14T22:21:54.120917"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.fourpawsusa.org/our-stories/publications-guides/a-cats-personality"]}, "ts": "2025-07-14T22:21:54.172802"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.petmd.com/cat/general-health/fun-facts-about-cats"]}, "ts": "2025-07-14T22:21:54.222951"}
+{"provider": "tavily", "event": "extract", "depth": "advanced", "count": 1, "credits": 3, "details": {"urls": ["https://www.alleycat.org/resources/the-natural-history-of-the-cat/"]}, "ts": "2025-07-14T22:21:54.674609"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1882, "output_tokens": 118, "ts": "2025-07-14T22:21:56.559680"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1730, "output_tokens": 92, "ts": "2025-07-14T22:21:57.003253"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1441, "output_tokens": 181, "ts": "2025-07-14T22:21:57.116970"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 399, "output_tokens": 19, "ts": "2025-07-14T22:21:57.271382"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 371, "output_tokens": 17, "ts": "2025-07-14T22:21:57.558871"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 2200, "output_tokens": 129, "ts": "2025-07-14T22:21:57.759109"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 462, "output_tokens": 23, "ts": "2025-07-14T22:21:57.859710"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 406, "output_tokens": 10, "ts": "2025-07-14T22:21:58.739228"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 1534, "output_tokens": 265, "ts": "2025-07-14T22:22:02.599324"}
+{"provider": "openai", "model": "gpt-3.5-turbo", "event": "model_call", "input_tokens": 540, "output_tokens": 16, "ts": "2025-07-14T22:22:03.478448"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 155, "ts": "2025-07-17T22:37:07.848104"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 573, "output_tokens": 58, "ts": "2025-07-17T22:37:09.270452"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 585, "output_tokens": 70, "ts": "2025-07-17T22:37:09.590979"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 763, "output_tokens": 224, "ts": "2025-07-17T22:37:36.433480"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 777, "output_tokens": 235, "ts": "2025-07-17T22:37:37.152909"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 866, "output_tokens": 80, "ts": "2025-07-17T22:37:38.582342"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 886, "output_tokens": 84, "ts": "2025-07-17T22:37:38.794590"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T22:37:43.397252"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 387, "output_tokens": 73, "ts": "2025-07-17T22:37:51.080219"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T22:37:58.125874"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 387, "output_tokens": 73, "ts": "2025-07-17T22:38:05.222923"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 139, "ts": "2025-07-17T22:38:10.261707"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 393, "output_tokens": 63, "ts": "2025-07-17T22:38:13.581497"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 391, "output_tokens": 110, "ts": "2025-07-17T22:38:14.471546"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 389, "output_tokens": 107, "ts": "2025-07-17T22:38:16.110109"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 535, "output_tokens": 80, "ts": "2025-07-17T22:38:17.084922"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 536, "output_tokens": 88, "ts": "2025-07-17T22:38:19.665548"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 535, "output_tokens": 110, "ts": "2025-07-17T22:38:22.745406"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 531, "output_tokens": 110, "ts": "2025-07-17T22:38:24.552839"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 568, "output_tokens": 87, "ts": "2025-07-17T22:38:26.782747"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 564, "output_tokens": 85, "ts": "2025-07-17T22:38:29.280457"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T22:38:40.759424"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 390, "output_tokens": 48, "ts": "2025-07-17T22:38:46.503228"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 388, "output_tokens": 60, "ts": "2025-07-17T22:38:48.667356"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 392, "output_tokens": 65, "ts": "2025-07-17T22:38:51.673413"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 534, "output_tokens": 60, "ts": "2025-07-17T22:38:52.746810"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 530, "output_tokens": 74, "ts": "2025-07-17T22:38:54.261463"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 534, "output_tokens": 69, "ts": "2025-07-17T22:38:56.721508"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 514, "output_tokens": 57, "ts": "2025-07-17T22:38:58.444258"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 527, "output_tokens": 87, "ts": "2025-07-17T22:38:59.511069"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 563, "output_tokens": 60, "ts": "2025-07-17T22:39:02.271777"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 574, "output_tokens": 74, "ts": "2025-07-17T22:39:03.830070"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 526, "output_tokens": 84, "ts": "2025-07-17T22:39:05.001396"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 514, "output_tokens": 57, "ts": "2025-07-17T22:39:07.072523"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 573, "output_tokens": 69, "ts": "2025-07-17T22:39:07.917665"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 527, "output_tokens": 89, "ts": "2025-07-17T22:39:08.813734"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 526, "output_tokens": 84, "ts": "2025-07-17T22:39:13.518363"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T22:39:20.282409"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 392, "output_tokens": 68, "ts": "2025-07-17T22:39:26.195420"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T22:39:33.226160"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 391, "output_tokens": 69, "ts": "2025-07-17T22:39:39.833395"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 145, "ts": "2025-07-17T23:39:49.204489"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 573, "output_tokens": 69, "ts": "2025-07-17T23:39:50.691247"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 573, "output_tokens": 59, "ts": "2025-07-17T23:39:50.956363"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:39:55.429148"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 387, "output_tokens": 73, "ts": "2025-07-17T23:39:58.492045"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 389, "output_tokens": 98, "ts": "2025-07-17T23:39:58.608109"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 391, "output_tokens": 65, "ts": "2025-07-17T23:39:59.236661"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 146, "ts": "2025-07-17T23:41:27.911569"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:41:30.603674"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:41:38.815195"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 139, "ts": "2025-07-17T23:41:46.274068"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:41:51.649190"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:41:56.497598"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 140, "ts": "2025-07-17T23:42:00.446780"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 145, "ts": "2025-07-17T23:43:51.046470"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:43:53.643482"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:43:59.204272"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 139, "ts": "2025-07-17T23:44:03.735452"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:44:08.242012"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:44:12.737242"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:44:18.000114"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 142, "ts": "2025-07-17T23:45:51.768171"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:45:53.689615"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:45:58.033608"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 139, "ts": "2025-07-17T23:46:01.711920"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 140, "ts": "2025-07-17T23:46:05.714876"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:46:10.393045"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 140, "ts": "2025-07-17T23:46:17.441366"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 147, "ts": "2025-07-17T23:47:44.463712"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:47:46.632345"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 140, "ts": "2025-07-17T23:47:51.489900"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 139, "ts": "2025-07-17T23:47:55.303266"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 140, "ts": "2025-07-17T23:48:00.140285"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:48:04.136903"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:48:08.637058"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 141, "ts": "2025-07-17T23:50:26.162334"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:50:29.406258"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:50:33.991303"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 139, "ts": "2025-07-17T23:50:38.749108"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:50:46.075237"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:50:54.724458"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 140, "ts": "2025-07-17T23:51:03.952461"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 148, "ts": "2025-07-17T23:52:42.636130"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:52:44.923377"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:52:50.473726"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 139, "ts": "2025-07-17T23:52:54.310853"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:52:58.108890"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:53:03.091901"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:53:07.550775"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 136, "ts": "2025-07-17T23:54:36.960663"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:54:39.004803"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:54:44.068665"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 139, "ts": "2025-07-17T23:54:49.667877"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:54:55.513468"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:55:00.196161"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 140, "ts": "2025-07-17T23:55:04.422679"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 144, "ts": "2025-07-17T23:55:35.423007"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:55:39.990257"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:55:49.115246"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 139, "ts": "2025-07-17T23:55:58.138435"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 140, "ts": "2025-07-17T23:56:06.478163"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:56:13.791371"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:56:20.950851"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 140, "ts": "2025-07-17T23:56:57.922471"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:57:00.279892"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:57:04.430908"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 702, "output_tokens": 139, "ts": "2025-07-17T23:57:08.273528"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:57:11.895461"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 701, "output_tokens": 139, "ts": "2025-07-17T23:57:15.474219"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-17T23:57:20.354226"}
+{"provider": "anthropic", "model": "claude-3-5-sonnet-20240620", "event": "model_call", "input_tokens": 819, "output_tokens": 141, "ts": "2025-07-18T00:07:49.857060"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 139, "ts": "2025-07-18T00:07:53.306740"}
+{"provider": "together", "model": "meta-llama/Llama-3.3-70B-Instruct-Turbo", "event": "model_call", "input_tokens": 700, "output_tokens": 140, "ts": "2025-07-18T00:07:57.821820"}

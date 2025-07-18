@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
+from open_deep_research.search import duckduckgo_search
 from open_deep_research.tavily_tools import tavily_search_tool
 
 from .dependency_manager import SearchProvider, validate_provider_or_raise
@@ -138,8 +139,6 @@ class DuckDuckGoSearchProvider(SearchProviderBase):
 
     async def search(self, queries: List[str], **kwargs) -> List[SearchResult]:
         """Execute DuckDuckGo search."""
-        from open_deep_research.utils import duckduckgo_search
-
         # DuckDuckGo doesn't need parameter validation
         results = []
 

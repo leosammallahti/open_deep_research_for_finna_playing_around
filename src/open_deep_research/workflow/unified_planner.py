@@ -33,11 +33,11 @@ async def unified_planner(state: DeepResearchState, config: RunnableConfig) -> d
         else {}
     )
 
+    # Precedence: explicit config override > feature flag > state default
     mode = (
-        getattr(state, "execution_mode", None)
-        or cfg_mapping.get("mode")
+        cfg_mapping.get("mode")
         or ("multi_agent" if features_map.get("mcp_support") else None)
-        or "workflow"
+        or state.execution_mode  # always present (default 'workflow')
     )
 
     # --------------------------------------------------------------

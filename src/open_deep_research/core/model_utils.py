@@ -7,6 +7,7 @@ from typing import Any, Dict, Type
 # ---------------------------------------------------------------------------
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chat_models import init_chat_model
+from langchain.tools import BaseTool
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import Runnable
 from pydantic import BaseModel
@@ -107,6 +108,10 @@ except ImportError:  # Fallback if older langsmith version
             return _noop
 
     Trace = _NoOpTrace
+
+
+if "__all__" not in globals():
+    __all__: list[str] = []
 
 
 def initialize_model(
@@ -275,3 +280,30 @@ def trace_config(session: str = "dev") -> Dict[str, Any]:
             "project": os.getenv("LANGSMITH_PROJECT"),
         },
     }
+
+
+def bind_tools_with_capability(
+    llm: Any,
+    tools: list[BaseTool],
+    model_id: str,
+    *,
+    parallel_tool_calls: bool = False,
+    tool_choice: str | None = "any",
+):
+    """Bind *tools* to *llm* respecting the model's tool-calling capability.
+
+    Most OpenAI-compatible models support function-calling via ``bind_tools`` but
+    a few (e.g. DeepSeek-Reasoner) do **not**.  This helper centralises the
+    try/except logic so callers don’t repeat the same pattern.
+    """
+
+    from open_deep_research.model_registry import supports_tool_choice
+
+    if supports_tool_choice(model_id):
+        return llm.bind_tools(
+            tools,
+            parallel_tool_calls=parallel_tool_calls,
+            tool_choice=tool_choice,
+        )
+    # Fallback – older models silently ignore *tool_choice* argument
+    return llm.bind_tools(tools, parallel_tool_calls=parallel_tool_calls)

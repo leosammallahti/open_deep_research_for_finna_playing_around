@@ -73,12 +73,13 @@ from markdownify import markdownify
 from pydantic import BaseModel
 
 from open_deep_research.core.logging_utils import get_logger
+from open_deep_research.core.network_utils import async_retry
 from open_deep_research.credit_tracker import record_tavily
 from open_deep_research.message_utils import (
     count_message_tokens,
     truncate_message_content,
 )
-from open_deep_research.prompts import SUMMARIZATION_PROMPT
+from open_deep_research.prompt_loader import load_prompt
 from open_deep_research.pydantic_state import Section
 from open_deep_research.tavily_tools import (
     acquire_tavily_semaphore,
@@ -109,11 +110,9 @@ def deduplicate_and_format_sources(
     formatted_output = ""
     unique_results: dict[str, Dict[str, Any]] = {}
 
-    # Early exit on empty input
     if not search_response:
         return "No search results found."
 
-    # Normalise to list
     sources_list = (
         search_response if isinstance(search_response, list) else [search_response]
     )
@@ -133,11 +132,10 @@ def deduplicate_and_format_sources(
                 continue
 
             if deduplication_strategy == "keep_first" and url in unique_results:
-                continue  # skip duplicates when keeping first
+                continue
 
-            unique_results[url] = result  # keep last by default or overwrite
+            unique_results[url] = result
 
-    # Build output roughly following the original style
     for i, (url, result) in enumerate(unique_results.items()):
         formatted_output += f"\n\nSource: {safe_get(result, 'title', 'Untitled')}\n"
         formatted_output += f"URL: {url}\n===\n"
@@ -146,9 +144,7 @@ def deduplicate_and_format_sources(
         if include_raw_content:
             raw_content = safe_get(result, "raw_content", "")
             if raw_content:
-                formatted_output += (
-                    f"Full content:\n{raw_content[:max_tokens_per_source]}\n"
-                )
+                formatted_output += f"Full content:\n{raw_content[:max_tokens_per_source]}\n"
 
     return formatted_output or "No valid search results found."
 
@@ -174,6 +170,7 @@ Content:
 
 
 @traceable
+@async_retry()
 async def azureaisearch_search_async(
     search_queries: list[str],
     max_results: int = 5,
@@ -268,6 +265,7 @@ async def azureaisearch_search_async(
 
 
 @traceable
+@async_retry()
 async def perplexity_search_async(search_queries: List[str]) -> List[Dict[str, Any]]:
     """Perform concurrent web searches using the Perplexity API asynchronously.
 
@@ -343,6 +341,7 @@ async def perplexity_search_async(search_queries: List[str]) -> List[Dict[str, A
 
 
 @traceable
+@async_retry()
 async def exa_search(
     search_queries: List[str],
     max_characters: int | None = None,
@@ -553,6 +552,7 @@ async def exa_search(
 
 
 @traceable
+@async_retry()
 async def arxiv_search_async(
     search_queries: List[str],
     load_max_docs: int = 5,
@@ -725,6 +725,7 @@ async def arxiv_search_async(
 
 
 @traceable
+@async_retry()
 async def pubmed_search_async(
     search_queries: List[str],
     top_k_results: int = 5,
@@ -882,6 +883,7 @@ async def pubmed_search_async(
 
 
 @traceable
+@async_retry()
 async def linkup_search(
     search_queries: List[str], depth: str | None = "standard"
 ) -> List[Dict[str, Any]]:
@@ -935,6 +937,7 @@ async def linkup_search(
 
 
 @traceable
+@async_retry()
 async def google_search_async(
     search_queries: Union[str, List[str]],
     max_results: int = 5,
@@ -1300,6 +1303,7 @@ async def scrape_pages(titles: List[str], urls: List[str]) -> str:
 
 
 @tool
+@async_retry()
 async def duckduckgo_search(search_queries: List[str]):
     """Perform searches using DuckDuckGo with retry logic to handle rate limits.
 
@@ -1423,71 +1427,19 @@ async def duckduckgo_search(search_queries: List[str]):
 async def select_and_execute_search(
     search_api: str, query_list: list[str], params_to_pass: dict
 ) -> str:
-    """Select and execute the appropriate search function based on the search_api string.
+    """Unified search entry – delegates to map-driven dispatcher.
 
-    Args:
-        search_api (str): The search API to use (e.g., "tavily", "perplexity", "none").
-        query_list (list[str]): The list of search queries.
-        params_to_pass (dict): A dictionary of parameters for the search function.
-
-    Returns:
-        str: The formatted search results.
+    This wrapper now directly calls
+    ``open_deep_research.search_dispatcher.select_and_execute_search`` and no
+    longer contains the massive provider ``elif`` chain.  All providers must be
+    registered in the dispatcher; otherwise a ValueError is raised, which is
+    desirable because it surfaces missing wiring early.
     """
-    # Handle "none" search API - return empty results
-    if search_api.lower() == "none":
-        return "No search performed (search API set to 'none')."
-
-    # Web search
-    if search_api == "tavily":
-        from langchain_tavily import TavilySearch
-
-        from open_deep_research.tavily_tools import (
-            acquire_tavily_semaphore,
-        )
-
-        async def _run_search(q: str):
-            async with acquire_tavily_semaphore():
-                invoke_args = {k: v for k, v in params_to_pass.items() if v is not None}
-                invoke_args["query"] = q
-                # Record estimated credit usage BEFORE making the call so we
-                # capture errors/timeouts too.
-                depth_val = invoke_args.get("search_depth", "advanced")
-                record_tavily("search", depth_val, query=q)
-
-                # Create a dynamic Tavily tool with the correct parameters
-                # This ensures the search_depth from configuration is respected
-                tavily_tool = TavilySearch(
-                    search_depth=depth_val,
-                    max_results=invoke_args.get("max_results", 5),
-                    include_raw_content=False,
-                )
-                return await tavily_tool.ainvoke(invoke_args)
-
-        search_results = await asyncio.gather(*[_run_search(q) for q in query_list])
-        search_results = await _supplement_with_extract(search_results)
-    elif search_api == "perplexity":
-        search_results = await perplexity_search_async(query_list)
-    elif search_api == "exa":
-        search_results = await exa_search(query_list, **params_to_pass)
-    elif search_api == "arxiv":
-        search_results = await arxiv_search_async(query_list, **params_to_pass)
-    elif search_api == "pubmed":
-        search_results = await pubmed_search_async(query_list, **params_to_pass)
-    elif search_api == "linkup":
-        search_results = await linkup_search(query_list, **params_to_pass)
-    elif search_api == "googlesearch":
-        search_results = await google_search_async(query_list, **params_to_pass)
-    elif search_api == "duckduckgo":
-        # duckduckgo_search returns a formatted string directly, not a list of dicts
-        return await duckduckgo_search.ainvoke({"search_queries": query_list})
-    elif search_api == "azureaisearch":
-        search_results = await azureaisearch_search_async(query_list, **params_to_pass)
-    else:
-        raise ValueError(f"Unsupported search API: {search_api}")
-
-    return deduplicate_and_format_sources(
-        search_results, max_tokens_per_source=4000, deduplication_strategy="keep_first"
+    from open_deep_research.search_dispatcher import (
+        select_and_execute_search as _dispatch,
     )
+
+    return await _dispatch(search_api, query_list, params_to_pass)
 
 
 class Summary(BaseModel):
@@ -1519,7 +1471,7 @@ async def summarize_webpage(model: BaseChatModel, webpage_content: str) -> str:
                 [
                     {
                         "role": "system",
-                        "content": SUMMARIZATION_PROMPT.format(
+                        "content": load_prompt("summarization").format(
                             webpage_content=webpage_content
                         ),
                     },
@@ -1774,7 +1726,19 @@ async def get_structured_output_with_fallback(
     def _is_transient(exc: Exception) -> bool:  # noqa: D401 – small inline helper
         """Return *True* if *exc* is considered transient/network-related."""
 
-        transient_types = (httpx.HTTPError,)
+        # Treat network-level errors and *schema validation* errors as transient so that we
+        # gracefully fall back to the manual JSON-parsing branch instead of aborting the
+        # whole run with a *FatalModelError*.  The latter happens, for example, when an
+        # LLM omits a required field (e.g. ``section_content``) in the structured-output
+        # response.  Those omissions are *not* fatal – we can usually recover by asking the
+        # parser to coerce a minimal instance and continue the workflow.
+
+        from pydantic import ValidationError  # local import to avoid global dependency
+
+        transient_types = (
+            httpx.HTTPError,
+            ValidationError,
+        )
         if isinstance(exc, transient_types):
             return True
 
@@ -1796,7 +1760,7 @@ async def get_structured_output_with_fallback(
         return cast("BaseModel", result)
     except Exception as e:
         # If the error is fatal (auth, invalid request) immediately re-raise as
-        # ``FatalModelError`` so upstream retry loops don’t hammer the API.
+        # ``FatalModelError`` so upstream retry loops don't hammer the API.
         if not _is_transient(e):
             raise FatalModelError(str(e), provider=model_id) from e
 

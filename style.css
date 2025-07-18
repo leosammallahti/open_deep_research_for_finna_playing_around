@@ -1,0 +1,73 @@
+/* Minimalistic Futuristic Dark Theme */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+:root {
+    --bg: #0f0f0f;
+    --fg: #e0e0e0;
+    --accent: #00ffff;
+    --card: #1a1a1a;
+    --border: #333333;
+    --muted: #1a1a1a;
+    --shadow: rgba(0, 0, 0, 0.5);
+}
+
+/* Base application */
+.stApp {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: 'Orbitron', sans-serif;
+}
+
+/* Headers */
+h1, h2, h3, .app-subtitle {
+    color: var(--accent);
+}
+
+/* Buttons */
+.stButton > button {
+    background-color: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 8px;
+    padding: 0.6em 2em;
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.stButton > button:hover {
+    opacity: 0.8;
+}
+
+/* Hide Streamlit branding */
+footer, header, #MainMenu {
+    visibility: hidden;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background-color: var(--card);
+    border-right: 1px solid var(--border);
+}
+
+/* Config boxes */
+.config-box {
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.config-box [data-baseweb="select"] {
+    background-color: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+}
+
+.config-box .stNumberInput input {
+    background-color: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    color: var(--fg) !important;
+} 

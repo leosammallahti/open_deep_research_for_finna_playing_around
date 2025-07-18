@@ -11,7 +11,7 @@ from tests.evals.evaluators import eval_overall_quality, eval_relevance, eval_st
 load_dotenv("../.env")
 
 # Security fix: Removed API key logging to prevent exposure in logs
-# print(os.getenv("LANGSMITH_API_KEY"))
+
 
 client = Client()
 

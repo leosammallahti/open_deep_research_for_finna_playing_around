@@ -61,3 +61,46 @@ class FeatureCompatibility:
             for f in disallowed
             if features.get(f, False)
         ]
+
+    @classmethod
+    def is_allowed(
+        cls,
+        feature: str,
+        *,
+        mode: str | None = None,
+        active_features: Dict[str, bool] | None = None,
+    ) -> bool:
+        """Return *True* if *feature* can be enabled given *mode* and *active_features*.
+
+        Parameters
+        ----------
+        feature
+            Name of the feature we want to enable.
+        mode
+            Execution mode ("workflow", "multi_agent", or "hybrid").  If *None* the
+            mode‐level restrictions are skipped.
+        active_features
+            Mapping of *currently* enabled feature flags.  The helper checks
+            pair-wise compatibility between *feature* and every *other* active
+            feature.  If *None* we assume no other features are active.
+        """
+
+        # Check mode restriction first – a single disallow is enough to reject.
+        if mode is not None:
+            disallowed = cls.MODE_RESTRICTIONS.get(mode, [])
+            if feature in disallowed:
+                return False
+
+        # If no other active features we are good.
+        if not active_features:
+            return True
+
+        # Evaluate pair-wise matrix with every *other* active feature that is True.
+        for other, enabled in active_features.items():
+            if not enabled or other == feature:
+                continue
+            key = cast(Tuple[str, str], tuple(sorted((feature, other))))
+            if cls.MATRIX.get(key, True) is False:
+                return False
+
+        return True

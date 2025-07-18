@@ -110,37 +110,37 @@ class ModelCombo(TypedDict):
 
 PREDEFINED_COMBOS: Dict[str, ModelCombo] = {
     "together_ai": {
-        "display_name": "⚡️ Together AI (Llama 3.3 70B + Qwen 2.5)",
+        "display_name": "Together AI (Llama 3.3 70B + Qwen 2.5)",
         "planner": "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
         "writer": "together:meta-llama/Llama-3.3-70B-Instruct-Turbo",
         "summarizer": "together:Qwen/Qwen2.5-72B-Instruct-Turbo",
     },
     "balanced": {
-        "display_name": "⚖️ Balanced (Claude 3.5 Sonnet)",
+        "display_name": "Balanced (Claude 3.5 Sonnet)",
         "planner": "anthropic:claude-3-5-sonnet-20240620",
         "writer": "anthropic:claude-3-5-sonnet-20240620",
         "summarizer": "anthropic:claude-3-haiku-20240307",
     },
     "max_reasoning": {
-        "display_name": "🤖 Max Reasoning (DeepSeek + Claude)",
+        "display_name": "Max Reasoning (DeepSeek + Claude)",
         "planner": "deepseek:deepseek-reasoner",
         "writer": "anthropic:claude-3-5-sonnet-20240620",
         "summarizer": "anthropic:claude-3-haiku-20240307",
     },
     "gpt_4o": {
-        "display_name": "🚀 GPT-4o (OpenAI)",
+        "display_name": "GPT-4o (OpenAI)",
         "planner": "openai:gpt-4o",
         "writer": "openai:gpt-4o",
         "summarizer": "openai:gpt-3.5-turbo",
     },
     "all_opensource": {
-        "display_name": "🌐 All Open-Source (Llama 3)",
+        "display_name": "All Open-Source (Llama 3)",
         "planner": "groq:llama-3.1-70b-versatile",
         "writer": "groq:llama-3.1-70b-versatile",
         "summarizer": None,
     },
     "budget": {
-        "display_name": "💰 Budget (GPT-3.5 Turbo)",
+        "display_name": "Budget (GPT-3.5 Turbo)",
         "planner": "openai:gpt-3.5-turbo",
         "writer": "openai:gpt-3.5-turbo",
         "summarizer": None,
